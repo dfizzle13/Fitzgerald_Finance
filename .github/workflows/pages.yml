@@ -23,7 +23,7 @@ jobs:
           const html = fs.readFileSync('index.html', 'utf8');
           const scripts = html.split('<script>').slice(1).map(part => part.split('</script>')[0]);
           if (!scripts.length) throw new Error('No inline scripts found');
-          scripts.forEach((match) => new Function(match[1]));
+          scripts.forEach((script) => new Function(script));
           JSON.parse(fs.readFileSync('manifest.webmanifest', 'utf8'));
           console.log('Validated ' + scripts.length + ' inline scripts and manifest JSON.');
           NODE
