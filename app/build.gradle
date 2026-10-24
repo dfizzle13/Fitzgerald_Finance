@@ -34,3 +34,10 @@ dependencies {
     implementation "androidx.biometric:biometric:1.1.0"
     implementation "androidx.core:core:1.13.1"
 }
+
+configurations.configureEach {
+    // Kotlin 1.8+ folds these JDK-specific classes into kotlin-stdlib.
+    // Older AndroidX transitive dependencies may still request duplicate legacy jars.
+    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"
+    exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
+}
