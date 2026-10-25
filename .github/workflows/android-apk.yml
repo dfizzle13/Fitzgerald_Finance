@@ -39,6 +39,10 @@ jobs:
           mkdir -p dist
           cp app/build/outputs/apk/debug/app-debug.apk dist/Fitzgerald-Finance.apk
           test -s dist/Fitzgerald-Finance.apk
+      - name: Verify APK package and signature
+        run: |
+          apksigner verify --verbose dist/Fitzgerald-Finance.apk
+          aapt dump badging dist/Fitzgerald-Finance.apk | grep -F "package: name='com.fitzgerald.finance'"
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
