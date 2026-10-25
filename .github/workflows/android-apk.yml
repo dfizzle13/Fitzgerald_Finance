@@ -41,8 +41,8 @@ jobs:
           test -s dist/Fitzgerald-Finance.apk
       - name: Verify APK package and signature
         run: |
-          apksigner verify --verbose dist/Fitzgerald-Finance.apk
-          aapt dump badging dist/Fitzgerald-Finance.apk | grep -F "package: name='com.fitzgerald.finance'"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose dist/Fitzgerald-Finance.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging dist/Fitzgerald-Finance.apk | grep -F "package: name='com.fitzgerald.finance'"
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
