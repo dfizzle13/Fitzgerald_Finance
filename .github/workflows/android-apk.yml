@@ -33,7 +33,7 @@ jobs:
           gradle-version: "8.9"
       - name: Build debug APK
         run: |
-          gradle --no-daemon :app:assembleDebug
+          gradle --no-daemon -PAPP_VERSION_CODE=${GITHUB_RUN_NUMBER} :app:assembleDebug
           mkdir -p dist
           cp app/build/outputs/apk/debug/app-debug.apk dist/Fitzgerald-Finance.apk
       - name: Upload APK
