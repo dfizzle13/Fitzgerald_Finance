@@ -33,12 +33,39 @@ jobs:
           gradle-version: "8.9"
       - name: Verify application ID
         run: grep -q 'applicationId "com.fitzgerald.finance"' app/build.gradle
-      - name: Build debug APK
+      - name: Require persistent signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64" || (echo "::error::Missing repository secret ANDROID_KEYSTORE_BASE64" && exit 1)
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || (echo "::error::Missing repository secret ANDROID_KEYSTORE_PASSWORD" && exit 1)
+          test -n "$ANDROID_KEY_ALIAS" || (echo "::error::Missing repository secret ANDROID_KEY_ALIAS" && exit 1)
+          test -n "$ANDROID_KEY_PASSWORD" || (echo "::error::Missing repository secret ANDROID_KEY_PASSWORD" && exit 1)
+      - name: Build APK
         run: |
           gradle --no-daemon -PAPP_VERSION_CODE=${GITHUB_RUN_NUMBER} :app:assembleDebug
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/Fitzgerald-Finance.apk
-          test -s dist/Fitzgerald-Finance.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/Fitzgerald-Finance-unsigned.apk
+          test -s dist/Fitzgerald-Finance-unsigned.apk
+      - name: Sign APK with persistent key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/fitzgerald-finance.jks"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign \
+            --ks "$RUNNER_TEMP/fitzgerald-finance.jks" \
+            --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass env:ANDROID_KEYSTORE_PASSWORD \
+            --key-pass env:ANDROID_KEY_PASSWORD \
+            --out dist/Fitzgerald-Finance.apk \
+            dist/Fitzgerald-Finance-unsigned.apk
+          rm -f "$RUNNER_TEMP/fitzgerald-finance.jks" dist/Fitzgerald-Finance-unsigned.apk
       - name: Verify APK package and signature
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose dist/Fitzgerald-Finance.apk
