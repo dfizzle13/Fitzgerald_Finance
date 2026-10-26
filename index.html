@@ -163,7 +163,7 @@ function stat(title,amount,sub){return '<div class="stat"><label>'+title+'</labe
 function metric(title,v,foot){return '<div class="stat"><label>'+title+'</label><strong>'+cash(v)+'</strong><small>'+foot+'</small></div>'}
 function renderCurrentPage(){if(!user)return;var draw={overview:renderOverview,calendar:renderCalendar,budgets:renderBudgets,transactions:renderTransactions,income:renderIncome,slush:renderSlush,ledger:renderLedger,settings:renderSettings,admin:renderUsers}[page];if(draw)draw()}
 function formatTables(){document.querySelectorAll('.tablewrap table').forEach(function(t){var heads=Array.from(t.querySelectorAll('thead th')).map(function(h){return h.textContent.trim()});t.querySelectorAll('tbody tr').forEach(function(r){Array.from(r.children).forEach(function(cell,i){if(cell.tagName==='TD'&&!cell.hasAttribute('colspan')){cell.setAttribute('data-label',heads[i]||'Details');cell.classList.toggle('actions-cell',!!cell.querySelector('button'))}})})})}
-function render(){if(!user)return;$('#root').dataset.theme=D().theme||'evergreen';filters();renderCurrentPage();formatTables()}
+function render(){if(!user)return;document.documentElement.dataset.theme=D().theme||'evergreen';document.body.dataset.theme=D().theme||'evergreen';filters();renderCurrentPage();formatTables()}
 var billMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1,12);
 function bills(){if(!Array.isArray(D().bills))D().bills=[];return D().bills}
 function billDate(b,year,month){if(b.frequency==='yearly'&&Number(b.month)!==month+1)return null;var day=Math.max(1,Number(b.day)||1),last=new Date(year,month+1,0).getDate();return iso(new Date(year,month,Math.min(day,last),12))}
