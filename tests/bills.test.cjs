@@ -56,7 +56,7 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run("billDueItems(2027,10)[0].amount"),0);
 
  // Budget horizons include shorter cadences, never longer ones (including $0 lines).
- run("user.data=seed();D().activeBudgetMonth='2026-11';D().bills=[];D().budgets=['weekly','monthly','annual'].map(function(c,i){return {id:c,name:c+' test line',category:'Groceries',group:'Food',cadence:c,amount:(i+1)*100,active:true,history:[{from:'2026-01-01',cadence:c,amount:(i+1)*100}]}});D().budgets.push({id:'zero',name:'Zero yearly line',category:'Groceries',group:'Food',cadence:'annual',amount:0,active:true});$('#budgetSearch').value='';$('#budgetGroup').value='all';$('#budgetStatus').value='all';summaryMonth='current'");
+ run("user.data=seed();D().activeBudgetMonth='2026-11';D().bills=[];D().budgets=['weekly','monthly','annual'].map(function(c,i){return {id:c,name:c+' test line',category:'Groceries',group:'Food',cadence:c,amount:(i+1)*100,active:true,history:[{from:'2026-01-01',cadence:c,amount:(i+1)*100}]}});D().budgets.push({id:'zero',name:'Zero yearly line',category:'Groceries',group:'Food',cadence:'annual',amount:0,active:true});$('#budgetSearch').value='';$('#budgetCadence').value='all';$('#budgetStatus').value='all';summaryMonth='current'");
  for(const [horizon,expected] of [['week',['weekly']],['month',['weekly','monthly']],['year',['weekly','monthly','annual']]]){
   run(`bp='${horizon}';renderBudgets()`);
   const rows=nodes['#budgetRows'].innerHTML;
@@ -73,6 +73,20 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run("budgetTotal('week')"),100);
  assert.equal(run("budgetTotal('month')"),700);
 
+
+ // Cadence filter narrows the selected horizon and works with search/status.
+ for(const cadence of ['all','weekly','monthly','annual']){
+  run(`bp='year';$('#budgetCadence').value='${cadence}';renderBudgets()`);
+  const rows=nodes['#budgetRows'].innerHTML;
+  for(const candidate of ['weekly','monthly','annual'])assert.equal(rows.includes(candidate+' test line'),cadence==='all'||cadence===candidate);
+ }
+ run("bp='month';$('#budgetCadence').value='annual';renderBudgets()");
+ assert.ok(nodes['#budgetRows'].innerHTML.includes('No matching budget lines'));
+ run("$('#budgetCadence').value='monthly';filters()");
+ assert.equal(nodes['#budgetCadence'].value,'monthly');
+ run("bp='year';$('#budgetSearch').value='no match';renderBudgets()");
+ assert.ok(nodes['#budgetRows'].innerHTML.includes('No matching budget lines'));
+ run("$('#budgetSearch').value='';$('#budgetCadence').value='all'");
  // Calendar-only exception: due this week at full price; yearly is entered amounts YTD.
  context.Date=class extends Date {constructor(...args){super(...(args.length?args:[2026,10,4,12]))}static now(){return new Date(2026,10,4,12).getTime()}};
  run("user.data=seed();D().activeBudgetMonth='2026-11';D().budgets=[];D().bills=[{id:'variable',name:'Variable utility',category:'Electricity',frequency:'monthly',day:6,active:true,monthlyAmounts:{'2025-12':999,'2026-01':80.25,'2026-10':90.50,'2026-11':110.75,'2026-12':500,'2027-01':999}}];syncBillBudgets();var billLine=budgets()[0];bp='week';renderBudgets()");
