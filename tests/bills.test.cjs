@@ -169,17 +169,16 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run("limit(item('newMonthly'),'year')"),25);
  assert.equal(run("limit(item('newMonthly'),'year',new Date(2026,9,31,12))"),0);
  // Annual overview includes all annual lines and only YTD spending, with the same status bars.
- run("D().budgets=D().budgets.concat(Array.from({length:10},function(_,i){return {id:'annual'+i,name:'Annual item '+i,cadence:'annual',amount:100,history:[{from:'2026-01-01',cadence:'annual',amount:100}]}}));D().transactions=[{id:'annualspent',title:'Annual spend',date:'2026-11-01',budgetId:'annual0',amount:120},{id:'futurespent',date:'2026-12-01',budgetId:'annual1',amount:55},{id:'oldspent',date:'2025-12-01',budgetId:'annual1',amount:66}];renderOverview()");
- assert.ok(!nodes['#annualPulse'].innerHTML.includes('Weekly groceries'));
- assert.ok(!nodes['#annualPulse'].innerHTML.includes('Monthly gas'));
- assert.ok(nodes['#annualPulse'].innerHTML.includes('Annual item 9'));
- assert.ok(nodes['#annualPulse'].innerHTML.includes('Over $20.00'));
- assert.ok(html.indexOf('id="annualPulse"')>html.indexOf('id="pulse"'));
- assert.ok(html.indexOf('id="annualPulse"')<html.indexOf('<h3>Quick actions</h3>'));
+ run("D().budgets=D().budgets.concat(Array.from({length:10},function(_,i){return {id:'annual'+i,name:'Annual item '+i,cadence:'annual',amount:100,history:[{from:'2026-01-01',cadence:'annual',amount:100}]}}));D().transactions=[{id:'annualspent',title:'Annual spend',date:'2026-11-01',budgetId:'annual0',amount:120},{id:'futurespent',date:'2026-12-01',budgetId:'annual1',amount:55},{id:'oldspent',date:'2025-12-01',budgetId:'annual1',amount:66}];period='year';renderOverview()");
+ assert.ok(!nodes['#pulse'].innerHTML.includes('Weekly groceries'));
+ assert.ok(!nodes['#pulse'].innerHTML.includes('Monthly gas'));
+ assert.ok(nodes['#pulse'].innerHTML.includes('Annual item 9'));
+ assert.ok(nodes['#pulse'].innerHTML.includes('Over $20.00'));
  assert.ok(!html.includes('annualStats'));
+ assert.ok(!html.includes('annualPulse'));
  assert.ok(html.indexOf('<h3>Quick actions</h3>')<html.indexOf('id="recent"'));
  run("D().budgets=[];renderOverview()");
- assert.ok(nodes['#annualPulse'].innerHTML.includes('No annual budget items yet'));
+ assert.ok(nodes['#pulse'].innerHTML.includes('No annual budget items yet'));
 
  // Summary remaining cards use their own current horizons, and coverage is always YTD.
  run("user.data=seed();D().activeBudgetMonth='2026-10';D().budgets=[{id:'w',name:'Weekly',cadence:'weekly',amount:100,history:[{from:'2026-01-01',cadence:'weekly',amount:100}]},{id:'m',name:'Monthly',cadence:'monthly',amount:200,history:[{from:'2026-01-01',cadence:'monthly',amount:200}]}];D().bills=[{id:'due',name:'Due bill',category:'Electricity',frequency:'monthly',day:6,monthlyAmounts:{'2026-11':100},active:true}];syncBillBudgets();D().transactions=[{id:'priorYear',date:'2025-12-31',amount:20},{id:'priorWeek',date:'2026-01-03',amount:30},{id:'current',date:'2026-11-02',amount:60},{id:'future',date:'2026-11-05',amount:1000}];period='week';renderOverview()");
@@ -207,6 +206,18 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run('upcomingBillItems(new Date(2026,11,28,12)).map(function(x){return x.date}).join(",")'),'2026-12-31,2027-01-04');
  run('D().bills=[];renderWeekBills()');
  assert.ok(nodes['#weekBills'].innerHTML.includes('No bills due in the next 7 days.'));
+
+ // Focus toggle strictly matches the native cadence and never rolls up calendar bills.
+ run("D().budgets=[{id:'fw',name:'Weekly only',cadence:'weekly',amount:100,history:[{from:'2026-01-01',cadence:'weekly',amount:100}]},{id:'fm',name:'Monthly only',cadence:'monthly',amount:200,history:[{from:'2026-01-01',cadence:'monthly',amount:200}]},{id:'fa',name:'Annual only',cadence:'annual',amount:300,history:[{from:'2026-01-01',cadence:'annual',amount:300}]}];D().bills=[{id:'fc',name:'Calendar monthly',category:'Electricity',frequency:'monthly',day:6,monthlyAmounts:{'2026-01':80,'2026-11':120},active:true}];D().transactions=[];syncBillBudgets()");
+ const labels={week:'Weekly only',month:'Monthly only',year:'Annual only'};
+ for(const selected of ['week','month','year']){
+  run(`$('#focusPeriods').onclick({target:{closest(){return {dataset:{period:'${selected}'}}}}})`);
+  assert.equal(nodes['#overviewHeading'].textContent,'Your '+selected+', in focus');
+  for(const [key,label] of Object.entries(labels))assert.equal(nodes['#pulse'].innerHTML.includes(label),key===selected);
+  assert.equal(nodes['#pulse'].innerHTML.includes('Calendar monthly'),selected==='month');
+  assert.ok(nodes['#pulse'].innerHTML.includes({week:'$100.00',month:'$200.00',year:'$300.00'}[selected]));
+  if(selected==='month')assert.ok(nodes['#pulse'].innerHTML.includes('$120.00'));
+ }
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
