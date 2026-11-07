@@ -141,10 +141,10 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.ok(!nodes['#annualPulse'].innerHTML.includes('Monthly gas'));
  assert.ok(nodes['#annualPulse'].innerHTML.includes('Annual item 9'));
  assert.ok(nodes['#annualPulse'].innerHTML.includes('Over $20.00'));
- assert.ok(nodes['#annualStats'].innerHTML.includes('<strong>$1,000.00</strong>'));
- assert.ok(nodes['#annualStats'].innerHTML.includes('<strong>$120.00</strong>'));
  assert.ok(html.indexOf('id="annualPulse"')>html.indexOf('id="pulse"'));
- assert.ok(html.indexOf('id="annualPulse"')<html.indexOf('id="recent"'));
+ assert.ok(html.indexOf('id="annualPulse"')<html.indexOf('<h3>Quick actions</h3>'));
+ assert.ok(!html.includes('annualStats'));
+ assert.ok(html.indexOf('<h3>Quick actions</h3>')<html.indexOf('id="recent"'));
  run("D().budgets=[];renderOverview()");
  assert.ok(nodes['#annualPulse'].innerHTML.includes('No annual budget items yet'));
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
