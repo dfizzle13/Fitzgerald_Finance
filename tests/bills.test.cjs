@@ -68,7 +68,7 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run("limit(item('annual'),'month',monthDate('2026-11'))"),0);
  assert.equal(run("limit(item('weekly'),'month',monthDate('2026-11'))"),500);
  assert.equal(run("limit(item('monthly'),'month',monthDate('2026-11'))"),200);
- assert.ok(Math.abs(run("limit(item('monthly'),'year',monthDate('2026-11'))")-2400)<0.001);
+ assert.ok(Math.abs(run("limit(item('monthly'),'year',monthDate('2026-11'))")-2200)<0.001);
  assert.ok(Math.abs(run("limit(item('annual'),'year',monthDate('2026-11'))")-300)<0.001);
  assert.equal(run("budgetTotal('week')"),100);
  assert.equal(run("budgetTotal('month')"),700);
@@ -127,6 +127,26 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.ok(!nodes['#overviewStats'].innerHTML.includes(' spending = '));
  run("D().incomes=[];renderOverview()");
  assert.ok(nodes['#overviewStats'].innerHTML.includes('<strong>-$200.00</strong>'));
+
+ // YTD allocations follow historical changes, with no future periods or backfilled creation dates.
+ run("D().bills=[];D().budgets=[{id:'changingWeekly',name:'Weekly groceries',cadence:'weekly',amount:200,history:[{from:'2026-01-01',cadence:'weekly',amount:100},{from:'2026-01-11',cadence:'weekly',amount:150},{from:'2026-02-01',cadence:'weekly',amount:200}]},{id:'changingMonthly',name:'Monthly gas',cadence:'monthly',amount:90,history:[{from:'2026-01-01',cadence:'monthly',amount:40},{from:'2026-02-01',cadence:'monthly',amount:60},{from:'2026-12-01',cadence:'monthly',amount:90}]},{id:'newMonthly',name:'New monthly',cadence:'monthly',amount:25,history:[{from:'2026-11-01',cadence:'monthly',amount:25}]}]");
+ assert.equal(run("limit(item('changingWeekly'),'year',new Date(2026,0,12,12))"),350);
+ assert.equal(run("limit(item('changingMonthly'),'year',new Date(2026,1,15,12))"),100);
+ assert.equal(run("limit(item('changingMonthly'),'year')"),640);
+ assert.equal(run("limit(item('newMonthly'),'year')"),25);
+ assert.equal(run("limit(item('newMonthly'),'year',new Date(2026,9,31,12))"),0);
+ // Annual overview includes all annual lines and only YTD spending, with the same status bars.
+ run("D().budgets=D().budgets.concat(Array.from({length:10},function(_,i){return {id:'annual'+i,name:'Annual item '+i,cadence:'annual',amount:100,history:[{from:'2026-01-01',cadence:'annual',amount:100}]}}));D().transactions=[{id:'annualspent',title:'Annual spend',date:'2026-11-01',budgetId:'annual0',amount:120},{id:'futurespent',date:'2026-12-01',budgetId:'annual1',amount:55},{id:'oldspent',date:'2025-12-01',budgetId:'annual1',amount:66}];renderOverview()");
+ assert.ok(!nodes['#annualPulse'].innerHTML.includes('Weekly groceries'));
+ assert.ok(!nodes['#annualPulse'].innerHTML.includes('Monthly gas'));
+ assert.ok(nodes['#annualPulse'].innerHTML.includes('Annual item 9'));
+ assert.ok(nodes['#annualPulse'].innerHTML.includes('Over $20.00'));
+ assert.ok(nodes['#annualStats'].innerHTML.includes('<strong>$1,000.00</strong>'));
+ assert.ok(nodes['#annualStats'].innerHTML.includes('<strong>$120.00</strong>'));
+ assert.ok(html.indexOf('id="annualPulse"')>html.indexOf('id="pulse"'));
+ assert.ok(html.indexOf('id="annualPulse"')<html.indexOf('id="recent"'));
+ run("D().budgets=[];renderOverview()");
+ assert.ok(nodes['#annualPulse'].innerHTML.includes('No annual budget items yet'));
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
