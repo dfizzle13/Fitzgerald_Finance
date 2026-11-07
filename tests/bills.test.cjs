@@ -218,6 +218,21 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
   assert.ok(nodes['#pulse'].innerHTML.includes({week:'$100.00',month:'$200.00',year:'$300.00'}[selected]));
   if(selected==='month')assert.ok(nodes['#pulse'].innerHTML.includes('$120.00'));
  }
+
+ // Paid-early calendar transactions use scheduled due dates, but are already spent.
+ run("D().budgets=[];D().bills=[{id:'electricPaid',name:'Electric paid early',category:'Electricity',frequency:'monthly',day:20,active:true,monthlyAmounts:{'2026-11':85},paid:{'2026-11-20':true}},{id:'internetPaid',name:'Internet paid early',category:'Internet',frequency:'monthly',day:25,active:true,monthlyAmounts:{'2026-11':75},paid:{'2026-11-25':true}}];D().transactions=[{id:'pe',billId:'electricPaid',date:'2026-11-20',amount:85},{id:'pi',billId:'internetPaid',date:'2026-11-25',amount:75}];syncBillBudgets();period='month';renderOverview()");
+ assert.equal(run("focusSpending(budgets().find(function(b){return b.billId==='electricPaid'}),'month')"),85);
+ assert.equal(run("focusSpending(budgets().find(function(b){return b.billId==='internetPaid'}),'month')"),75);
+ assert.ok(nodes['#pulse'].innerHTML.includes('$85.00 <small>/ $85.00</small>'));
+ assert.ok(nodes['#pulse'].innerHTML.includes('$75.00 <small>/ $75.00</small>'));
+ assert.ok(nodes['#pulse'].innerHTML.includes('100% used'));
+ // Linked transaction and bill IDs identify one expense, never two copies.
+ run("syncBillBudgets();renderOverview()");
+ assert.equal(run("focusSpending(budgets()[0],'month')"),85);
+ run("bills()[0].paid={};renderOverview()");
+ assert.equal(run("focusSpending(budgets()[0],'month')"),0);
+ run("D().transactions[0].date='2026-10-20';bills()[0].paid={'2026-10-20':true};renderOverview()");
+ assert.equal(run("focusSpending(budgets()[0],'month')"),0);
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
