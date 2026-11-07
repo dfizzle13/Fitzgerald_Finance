@@ -66,12 +66,12 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run("limit(item('monthly'),'week',monthDate('2026-11'))"),0);
  assert.equal(run("limit(item('annual'),'week',monthDate('2026-11'))"),0);
  assert.equal(run("limit(item('annual'),'month',monthDate('2026-11'))"),0);
- assert.equal(run("limit(item('weekly'),'month',monthDate('2026-11'))"),600);
+ assert.equal(run("limit(item('weekly'),'month',monthDate('2026-11'))"),500);
  assert.equal(run("limit(item('monthly'),'month',monthDate('2026-11'))"),200);
  assert.ok(Math.abs(run("limit(item('monthly'),'year',monthDate('2026-11'))")-2400)<0.001);
  assert.ok(Math.abs(run("limit(item('annual'),'year',monthDate('2026-11'))")-300)<0.001);
  assert.equal(run("budgetTotal('week')"),100);
- assert.equal(run("budgetTotal('month')"),800);
+ assert.equal(run("budgetTotal('month')"),700);
 
  // Calendar-only exception: due this week at full price; yearly is entered amounts YTD.
  context.Date=class extends Date {constructor(...args){super(...(args.length?args:[2026,10,4,12]))}static now(){return new Date(2026,10,4,12).getTime()}};
@@ -102,6 +102,21 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.ok(nodes['#budgetRows'].innerHTML.includes('Variable utility'));
  assert.equal(run("limit(billLine,'week')"),0);
  assert.equal(run("limit(billLine,'year')"),0);
+
+ // Sunday the first belongs to the current week, including its recorded payment.
+ run("bills()[0].day=1;bills()[0].monthlyAmounts={'2026-11':125};syncBillBudgets();D().transactions=[{id:'sunday-payment',billId:'variable',budgetId:billLine.id,date:'2026-11-01',amount:125}];bp='week';renderBudgets()");
+ assert.equal(run('weekBounds().start'),'2026-11-01');
+ assert.equal(run('weekBounds().end'),'2026-11-07');
+ assert.ok(nodes['#budgetRows'].innerHTML.includes('Variable utility'));
+ assert.equal(run("limit(billLine,'week')"),125);
+ assert.equal(run("totalLine(billLine.id,'week')"),125);
+ assert.equal(run("inPeriod('2026-10-31','week')"),false);
+ assert.equal(run("startKey('2026-11-01','weekly')"),'2026-11-01');
+ assert.equal(run("startKey('2026-11-07','weekly')"),'2026-11-01');
+ assert.equal(run("startKey('2026-11-08','weekly')"),'2026-11-08');
+ assert.equal(run("limit(billLine,'week',new Date(2026,10,8,12))"),0);
+ run('renderCalendar()');
+ assert.ok(nodes['#billCalendar'].innerHTML.startsWith('<div class="calendar-head">Sun</div>'));
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
