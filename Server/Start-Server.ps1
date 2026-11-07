@@ -17,8 +17,10 @@ try {
     if ($health.shared) { Write-Output ('Fitzgerald Finance is already available: http://localhost:' + $config.port); return }
 } catch {}
 $pythonPath = $null
+$serverVenv = Join-Path $PSScriptRoot '.venv\Scripts\python.exe'
+if (Test-Path -LiteralPath $serverVenv) { $pythonPath = $serverVenv }
 foreach ($candidate in @((Join-Path $env:LOCALAPPDATA 'Python\pythoncore-3.11-64\python.exe'), (Join-Path $env:LOCALAPPDATA 'Python\pythoncore-3.15-64\python.exe'))) {
-    if (Test-Path -LiteralPath $candidate) { $pythonPath = $candidate; break }
+    if (!$pythonPath -and (Test-Path -LiteralPath $candidate)) { $pythonPath = $candidate; break }
 }
 if (!$pythonPath) { $pythonPath = (Get-Command python -ErrorAction Stop).Source }
 $serverArguments = @(('"' + $serverScript + '"'), '--host', [string]$config.host, '--port', [string]$config.port)

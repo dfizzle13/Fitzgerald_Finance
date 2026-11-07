@@ -28,7 +28,7 @@ function merge(base,local,remote,path='household'){
 class FinanceServer {
  constructor(hooks){this.hooks=hooks;this.base=null;this.revision=0;this.desired=null;this.saving=false;this.blocked=false;this.csrf='';this.user=null;}
  async request(path,method='GET',body){
-  const response=await fetch('/api/'+path,{method,credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-Finance-Request':'1','X-CSRF-Token':this.csrf},body:body===undefined?undefined:JSON.stringify(body)});
+  const response=await fetch(((typeof document!=='undefined'&&document.baseURI)?new URL('./api/',document.baseURI).pathname:'/api/')+path,{method,credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-Finance-Request':'1','X-CSRF-Token':this.csrf,'ngrok-skip-browser-warning':'1'},body:body===undefined?undefined:JSON.stringify(body)});
   let result;try{result=await response.json()}catch{throw Error('The household server is unavailable. Your changes are not saved yet.')}
   if(!response.ok){const error=Error(result.error||'Server request failed.');error.status=response.status;error.result=result;throw error;}
   return result;

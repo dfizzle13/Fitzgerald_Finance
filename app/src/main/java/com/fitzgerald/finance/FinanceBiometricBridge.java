@@ -14,14 +14,24 @@ import java.util.concurrent.Executor;
 public final class FinanceBiometricBridge {
     private final FragmentActivity activity;
     private final WebView webView;
+    private final SecureDeviceVault vault;
     private BiometricPrompt activePrompt;
     private String activeRequestId;
 
     public FinanceBiometricBridge(FragmentActivity activity, WebView webView) {
         this.activity = activity;
         this.webView = webView;
+        this.vault = new SecureDeviceVault((MainActivity) activity, webView);
     }
 
+    @JavascriptInterface public String getServerUrl() { return ((MainActivity)activity).serverUrl(); }
+    @JavascriptInterface public void testServer(String url,String requestId) { ((MainActivity)activity).testServer(url,requestId,false); }
+    @JavascriptInterface public void connectServer(String url,String requestId) { ((MainActivity)activity).testServer(url,requestId,true); }
+    @JavascriptInterface public void disconnectServer() { ((MainActivity)activity).disconnectServer(); }
+    @JavascriptInterface public boolean hasBiometricCredential(String scope) { return vault.has(scope); }
+    @JavascriptInterface public void storeBiometricCredential(String scope,String value,String requestId) { vault.authenticate(scope,value,requestId); }
+    @JavascriptInterface public void unlockBiometricCredential(String scope,String requestId) { vault.authenticate(scope,null,requestId); }
+    @JavascriptInterface public void removeBiometricCredential(String scope) { vault.remove(scope); }
     @JavascriptInterface
     public boolean isBiometricAvailable() {
         return BiometricManager.from(activity).canAuthenticate(
@@ -78,6 +88,7 @@ public final class FinanceBiometricBridge {
 
     @JavascriptInterface
     public void cancelAuthentication(String requestId) {
+        vault.cancel(requestId);
         activity.runOnUiThread(() -> {
             if (activePrompt != null && requestId != null && requestId.equals(activeRequestId)) {
                 activePrompt.cancelAuthentication();

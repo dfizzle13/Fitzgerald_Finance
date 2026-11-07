@@ -1,12 +1,12 @@
 // Runs against the disposable household server created by test_server.py.
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const endpoint=process.argv[2];
+const endpoint=process.argv[2];const endpointOrigin=endpoint?new URL(endpoint).origin:'';
 if(!endpoint)throw Error('This check requires the disposable server URL from test_server.py.');
 async function browser(file){
  const nodes=new Map(),storage=new Map();let cookie='';
  function node(){return {value:'all',innerHTML:'',textContent:'',disabled:false,style:{},dataset:{},options:[],childNodes:[],classList:{add(){},remove(){},toggle(name,force){this.lastToggle=[name,force]}},setAttribute(){},addEventListener(){},querySelector(){return node()},querySelectorAll(){return []}}}
- const context=vm.createContext({console,Date,Intl,Math,JSON,Number,String,Array,Object,Promise,Set,Map,Symbol,Uint8Array,TextEncoder,Error,localStorage:{setItem(k,v){storage.set(k,v)},getItem(k){return storage.get(k)||null},removeItem(k){storage.delete(k)}},document:{querySelector(s){if(!nodes.has(s))nodes.set(s,node());return nodes.get(s)},querySelectorAll(){return []},documentElement:node(),createElement:node},window:{FITZGERALD_SHARED:true,addEventListener(){},location:{reload(){}}},navigator:{},setInterval(){return 1},clearInterval(){},confirm:()=>true,alert(){},setTimeout,
- fetch:async(path,options={})=>{const response=await fetch(endpoint+path,{...options,headers:{...options.headers,...(cookie?{Cookie:cookie}:{})}});const fresh=response.headers.get('set-cookie');if(fresh)cookie=fresh.split(';')[0];return response;}});
+ const context=vm.createContext({console,URL,Date,Intl,Math,JSON,Number,String,Array,Object,Promise,Set,Map,Symbol,Uint8Array,TextEncoder,Error,localStorage:{setItem(k,v){storage.set(k,v)},getItem(k){return storage.get(k)||null},removeItem(k){storage.delete(k)}},document:{baseURI:endpoint.endsWith('/')?endpoint:endpoint+'/',querySelector(s){if(!nodes.has(s))nodes.set(s,node());return nodes.get(s)},querySelectorAll(){return []},documentElement:node(),createElement:node},window:{FITZGERALD_SHARED:true,addEventListener(){},location:{reload(){}}},navigator:{},setInterval(){return 1},clearInterval(){},confirm:()=>true,alert(){},setTimeout,
+ fetch:async(path,options={})=>{const response=await fetch(endpointOrigin+path,{...options,headers:{...options.headers,...(cookie?{Cookie:cookie}:{})}});const fresh=response.headers.get('set-cookie');if(fresh)cookie=fresh.split(';')[0];return response;}});
  vm.runInContext(fs.readFileSync('shared-client.js','utf8'),context);context.FinanceServer=context.window.FinanceServer;
  const script=fs.readFileSync(file,'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
  vm.runInContext(script.slice(script.indexOf("'use strict';"),script.lastIndexOf('load().then')),context);

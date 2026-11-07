@@ -6,3 +6,5 @@ Server/*.pid
 **/__pycache__/
 *.pyc
 work/
+
+Server/.venv/

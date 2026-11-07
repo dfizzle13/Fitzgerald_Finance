@@ -1,9 +1,10 @@
-"""Private household finance server. Python standard library only."""
+"""Private household finance server with device authentication."""
 from contextlib import contextmanager, closing
 from datetime import date as calendar_date
 import ipaddress
 import math
 import socket
+import device_auth
 import argparse
 import hashlib
 import hmac
@@ -78,6 +79,7 @@ class FinanceHTTPServer(ThreadingHTTPServer):
         self.secure_cookie = secure_cookie
         self.write_lock = threading.RLock()
         self.attempts = {}
+        self.device_challenges = {}
         super().__init__(address, Handler)
         with self.connect() as con:
             con.executescript('''
@@ -93,6 +95,7 @@ class FinanceHTTPServer(ThreadingHTTPServer):
                 id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL,
                 data TEXT NOT NULL, updated_by TEXT, updated_at INTEGER NOT NULL);
             ''')
+            device_auth.initialize(con)
     @contextmanager
     def connect(self):
         con = sqlite3.connect(self.database, timeout=15)
@@ -124,6 +127,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Content-Length', str(len(payload)))
         self.send_header('Cache-Control', 'no-store')
+        if urlsplit(self.path).path == '/api/status':
+            self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('X-Content-Type-Options', 'nosniff')
         if cookie:
             self.send_header('Set-Cookie', cookie)
@@ -197,6 +202,15 @@ class Handler(BaseHTTPRequestHandler):
         if self.server.secure_cookie:
             cookie += '; Secure'
         return {'user': self.account(account), 'csrf': csrf, **self.state(con)}, cookie
+    def do_OPTIONS(self):
+        if urlsplit(self.path).path != '/api/status':
+            return self.send_json(403, {'error': 'Cross-origin access is not enabled.'})
+        self.send_response(204)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET')
+        self.send_header('Access-Control-Allow-Headers', 'ngrok-skip-browser-warning, Content-Type')
+        self.send_header('Content-Length', '0')
+        self.end_headers()
     def do_GET(self):
         self.dispatch('GET')
     def do_POST(self):
@@ -230,7 +244,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(500, {'error': 'The server could not complete this request. Your data was not replaced.'})
     def api(self, method, path, con):
         if method == 'GET' and path == '/api/status':
-            return self.send_json(200, {'shared': True, 'needsSetup': con.execute('SELECT COUNT(*) FROM accounts').fetchone()[0] == 0})
+            return self.send_json(200, {'shared': True, 'application': 'fitzgerald-finance', 'webAuthn': device_auth.WEBAUTHN, 'needsSetup': con.execute('SELECT COUNT(*) FROM accounts').fetchone()[0] == 0})
         if method == 'POST' and path == '/api/setup':
             if con.execute('SELECT COUNT(*) FROM accounts').fetchone()[0]:
                 raise APIError(409, 'Setup is complete. Sign in instead.')
@@ -260,6 +274,8 @@ class Handler(BaseHTTPRequestHandler):
             response, cookie = self.new_session(con, row)
             con.commit()
             return self.send_json(200, response, cookie)
+        if path.startswith('/api/biometric/'):
+            return device_auth.handle(self, method, path, con, APIError)
         actor = self.session(con, method != 'GET')
         if method == 'GET' and path == '/api/session':
             return self.send_json(200, {'user': self.account(actor), 'csrf': actor['csrf'], **self.state(con)})
@@ -291,6 +307,7 @@ class Handler(BaseHTTPRequestHandler):
             salt = secrets.token_hex(16)
             con.execute('UPDATE accounts SET salt=?,password_hash=? WHERE id=?', (salt, password_hash(password, salt), actor['id']))
             con.execute('DELETE FROM sessions WHERE account_id=? AND token_hash<>?', (actor['id'], actor['token_hash']))
+            con.execute('DELETE FROM device_credentials WHERE account_id=?', (actor['id'],))
             con.commit()
             return self.send_json(200, {'ok': True})
         if actor['role'] != 'admin':
@@ -313,7 +330,7 @@ class Handler(BaseHTTPRequestHandler):
         raise APIError(404, 'Not found.')
     def static(self, path):
         allowed = {'/': ('index.html', 'text/html'), '/index.html': ('index.html', 'text/html'),
-            '/shared-client.js': ('shared-client.js', 'text/javascript'), '/sw.js': ('sw.js', 'text/javascript'),
+            '/shared-client.js': ('shared-client.js', 'text/javascript'), '/device-client.js': ('device-client.js', 'text/javascript'), '/connection-client.js': ('connection-client.js', 'text/javascript'), '/sw.js': ('sw.js', 'text/javascript'),
             '/manifest.webmanifest': ('manifest.webmanifest', 'application/manifest+json'), '/icon.svg': ('icon.svg', 'image/svg+xml')}
         if path not in allowed:
             raise APIError(404, 'Not found.')

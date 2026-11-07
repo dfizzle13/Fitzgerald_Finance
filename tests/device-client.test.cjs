@@ -1,0 +1,25 @@
+const assert=require('node:assert/strict');
+const storage=new Map();global.localStorage={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)};
+global.location={href:'https://example.ngrok-free.dev/finance/'};
+const connection=require('../connection-client.js');
+assert.equal(connection.normalize('https://example.ngrok-free.dev'),'https://example.ngrok-free.dev/finance/');
+assert.equal(connection.normalize('https://example.com/finance/'),'https://example.com/finance/');
+assert.equal(connection.normalize('http://localhost:8088'),'http://localhost:8088/');
+assert.throws(()=>connection.normalize('http://remote.example/finance/'),/HTTPS/);
+assert.throws(()=>connection.normalize('https://user:password@example.com/'),/credentials/);
+const Device=require('../device-client.js');let vault=null,removed=false;
+global.FitzgeraldAndroid={isBiometricAvailable:()=>true,storeBiometricCredential(scope,value,id){vault={scope,value};global.FinanceNativeVaultCallbacks.success(id,'stored')},unlockBiometricCredential(scope,id){assert.equal(scope,vault.scope);global.FinanceNativeVaultCallbacks.success(id,vault.value)},removeBiometricCredential(){removed=true}};
+const secret='a-secret-that-must-never-appear-in-local-storage';const calls=[];
+const client={async request(path,method,body){calls.push({path,body});if(path==='biometric/native/enroll')return {deviceId:'device-123',token:secret};if(path==='biometric/native/login'){assert.equal(body.token,secret);return {user:{username:'admin'}}}return {ok:true}}};
+(async()=>{
+ await Device.enroll(client,'admin','household-password');
+ assert.equal(Device.read('admin').enabled,true);assert.equal(Device.read('admin').mode,'native');
+ assert.ok(!JSON.stringify([...storage.values()]).includes(secret));assert.ok(!JSON.stringify([...storage.values()]).includes('household-password'));
+ assert.equal((await Device.login(client,'admin')).user.username,'admin');
+ global.location.href='https://another.example/finance/';assert.equal(Device.read('admin'),null);
+ global.location.href='https://example.ngrok-free.dev/finance/';await Device.disable(client,'admin');assert.equal(removed,true);assert.equal(Device.read('admin'),null);
+ const FinanceServer=require('../shared-client.js');global.document={baseURI:'https://example.ngrok-free.dev/finance/index.html'};
+ global.fetch=async(path)=>{assert.equal(path,'/finance/api/status');return {ok:true,json:async()=>({shared:true})}};
+ await new FinanceServer({status(){},state(){},idle(){return true}}).request('status');
+ console.log('Connection and device-local authentication checks passed.');
+})().catch(error=>{console.error(error);process.exitCode=1});

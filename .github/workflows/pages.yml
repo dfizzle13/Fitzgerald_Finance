@@ -26,8 +26,28 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Install device authentication dependencies
+        run: python -m pip install -r Server/requirements.txt
       - name: Check budgeting and shared synchronization
         run: |
           node tests/bills.test.cjs
           node tests/shared-client.test.cjs
-          python -m unittest discover -s tests -p test_server.py
+          node tests/device-client.test.cjs
+          python -m unittest discover -s tests -p 'test_*.py'
+
+  android-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-35 build-tools;35.0.0
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Compile Android source without packaging an APK
+        run: gradle --no-daemon :app:compileReleaseJavaWithJavac
