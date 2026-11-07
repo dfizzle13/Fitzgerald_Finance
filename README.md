@@ -36,7 +36,7 @@ This is a local-first prototype, not a production account system. Password hashe
 
 ## Deploy with GitHub Pages
 
-The workflow in `.github/workflows/pages.yml` publishes the static app when pushed to `main`. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions** if it is not already selected. WebAuthn requires HTTPS on the deployed origin. Storage is isolated by browser and device; accounts do not synchronize between devices.
+The workflow in `.github/workflows/pages.yml` validates JavaScript, the shared server, and Android compilation without packaging an APK. It does not deploy the household database. WebAuthn requires HTTPS on the deployed origin. Storage is isolated by browser and device; accounts do not synchronize between devices.
 
 ## Calendar bills and monthly budgets
 
@@ -55,3 +55,7 @@ Cash funding uses the prior month’s income: Summary’s **MTD Net Cash** subtr
 Marking a calendar bill paid records the transaction on the local date the button is clicked. Its scheduled due date is retained separately, including in the transaction notes. Duplicate prevention follows the scheduled bill month, so paying early or late does not create duplicate payments. Existing transactions retain their recorded dates because older records do not contain the original payment date; they can be corrected using Edit in Transactions.
 
 Ledger analysis offers **This Year** (January 1–December 31, including future-dated entries) and **All time**. Its totals, coverage and rows use that selection, with a January–December chart for This Year. Summary and Slush continue to use through-today spending calculations.
+
+## Shared connectivity and device authentication
+
+The Local Server Control Panel at `C:/Users/danie/Documents/Local Server Control Panel` routes the existing ngrok domain: InvestAI retains its root API/token, while Finance uses `/finance/`. **Server connectivity** on Settings and sign-in tests and saves that address per device. Shared-server biometric sign-in now uses device-held credentials; fingerprint/face templates remain with the OS. See [Server/README.md](Server/README.md). Android source changes require a later APK rebuild.
