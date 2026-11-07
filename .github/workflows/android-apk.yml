@@ -6,6 +6,9 @@ on:
     branches: [main]
     paths:
       - "index.html"
+      - "shared-client.js"
+      - "connection-client.js"
+      - "device-client.js"
       - "app/**"
       - "build.gradle"
       - "settings.gradle"
