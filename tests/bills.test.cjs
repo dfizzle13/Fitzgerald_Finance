@@ -180,6 +180,20 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.ok(html.indexOf('<h3>Quick actions</h3>')<html.indexOf('id="recent"'));
  run("D().budgets=[];renderOverview()");
  assert.ok(nodes['#annualPulse'].innerHTML.includes('No annual budget items yet'));
+
+ // Summary remaining cards use their own current horizons, and coverage is always YTD.
+ run("user.data=seed();D().activeBudgetMonth='2026-10';D().budgets=[{id:'w',name:'Weekly',cadence:'weekly',amount:100,history:[{from:'2026-01-01',cadence:'weekly',amount:100}]},{id:'m',name:'Monthly',cadence:'monthly',amount:200,history:[{from:'2026-01-01',cadence:'monthly',amount:200}]}];D().bills=[{id:'due',name:'Due bill',category:'Electricity',frequency:'monthly',day:6,monthlyAmounts:{'2026-11':100},active:true}];syncBillBudgets();D().transactions=[{id:'priorYear',date:'2025-12-31',amount:20},{id:'priorWeek',date:'2026-01-03',amount:30},{id:'current',date:'2026-11-02',amount:60},{id:'future',date:'2026-11-05',amount:1000}];period='week';renderOverview()");
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Weekly Spend Remaining</label><strong>$140.00</strong>'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Monthly Spend Remaining</label><strong>$740.00</strong>'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Slush Coverage</label><strong>$90.00</strong>'));
+ const summaryCards=nodes['#overviewStats'].innerHTML;
+ run("period='year';renderOverview()");
+ assert.equal(nodes['#overviewStats'].innerHTML,summaryCards);
+ run("D().transactions.push({id:'overspend',date:'2026-11-03',amount:1000});renderOverview()");
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Weekly Spend Remaining</label><strong>$0.00</strong>'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Monthly Spend Remaining</label><strong>$0.00</strong>'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('Over plan by $860.00'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('Over plan by $260.00'));
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
