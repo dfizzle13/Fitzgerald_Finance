@@ -253,9 +253,27 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  run("lp='year';renderLedger()");
  assert.ok(nodes['#ledgerRows'].innerHTML.includes('2026-11-04'));
  assert.ok(!nodes['#ledgerRows'].innerHTML.includes('<td>2027-01-01</td>'));
- const yearStats=nodes['#ledgerStats'].innerHTML.replaceAll('Year to date','PERIOD');
+ const yearStats=nodes['#ledgerStats'].innerHTML.replaceAll('This Year','PERIOD');
  run("lp='all';renderLedger()");
  assert.equal(nodes['#ledgerStats'].innerHTML.replaceAll('All time','PERIOD'),yearStats);
+
+ // Ledger This Year includes future dates within the year, with matching rows and coverage.
+ run("D().transactions=[{id:'jan',title:'January',date:'2026-01-01',amount:10},{id:'dec',title:'December',date:'2026-12-31',amount:20}];D().incomes=[{id:'pay',source:'Future pay',date:'2026-12-31',amount:100}];$('#ledgerType').value='all';lp='year';renderLedger()");
+ assert.ok(nodes['#ledgerRows'].innerHTML.includes('December'));
+ assert.ok(nodes['#ledgerRows'].innerHTML.includes('Future pay'));
+ assert.ok(nodes['#ledgerStats'].innerHTML.includes('<strong>$30.00</strong>'));
+ assert.ok(nodes['#ledgerStats'].innerHTML.includes('<strong>$100.00</strong>'));
+ assert.equal(nodes['#ledgerChartPeriod'].textContent,'This Year');
+ assert.equal((nodes['#ledgerBars'].innerHTML.match(/class="barcol"/g)||[]).length,12);
+ const thisYearCards=nodes['#ledgerStats'].innerHTML.replaceAll('This Year','PERIOD');
+ run("lp='all';renderLedger()");
+ assert.equal(nodes['#ledgerStats'].innerHTML.replaceAll('All time','PERIOD'),thisYearCards);
+ run("D().transactions.push({id:'old',title:'Previous year',date:'2025-12-31',amount:999},{id:'next',title:'Next year',date:'2027-01-01',amount:888});lp='year';renderLedger()");
+ assert.ok(!nodes['#ledgerRows'].innerHTML.includes('Previous year'));
+ assert.ok(!nodes['#ledgerRows'].innerHTML.includes('Next year'));
+ // Summary/Slush YTD still stop at today.
+ assert.equal(run("sum(expenses(),'year')"),10);
+ assert.equal(run('cashTotals().ytdSpending'),10);
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
