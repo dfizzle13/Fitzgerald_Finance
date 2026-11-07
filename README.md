@@ -41,3 +41,5 @@ Each recurring bill automatically receives a monthly budget line (existing linke
 Existing recurring amounts are migrated into the active budget month, with recorded bill payments retained for their historical months. Archived budget snapshots remain unchanged. View them using **Archived budgets** at the bottom of the Budget tab; Summary always shows the active plan.
 
 Run the source regression checks with `node tests/bills.test.cjs`. A commit containing `[skip apk]` skips the automatic Android build; the APK workflow can still be run manually.
+
+Calendar bill exception: a bill due in the current Monday–Sunday week also appears in Weekly with its full entered amount, including bills due later in that week. Monthly uses the same full amount for that month. Yearly sums entered monthly amounts from January through the current month; unset months, future months, and other years do not contribute. These are amounts loaded into the budget, whether paid yet or not. Regular budget lines retain the normal horizon rollup rules.

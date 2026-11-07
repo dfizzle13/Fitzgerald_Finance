@@ -72,6 +72,36 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.ok(Math.abs(run("limit(item('annual'),'year',monthDate('2026-11'))")-300)<0.001);
  assert.equal(run("budgetTotal('week')"),100);
  assert.equal(run("budgetTotal('month')"),800);
+
+ // Calendar-only exception: due this week at full price; yearly is entered amounts YTD.
+ context.Date=class extends Date {constructor(...args){super(...(args.length?args:[2026,10,4,12]))}static now(){return new Date(2026,10,4,12).getTime()}};
+ run("user.data=seed();D().activeBudgetMonth='2026-11';D().budgets=[];D().bills=[{id:'variable',name:'Variable utility',category:'Electricity',frequency:'monthly',day:6,active:true,monthlyAmounts:{'2025-12':999,'2026-01':80.25,'2026-10':90.50,'2026-11':110.75,'2026-12':500,'2027-01':999}}];syncBillBudgets();var billLine=budgets()[0];bp='week';renderBudgets()");
+ assert.ok(nodes['#budgetRows'].innerHTML.includes('Variable utility'));
+ assert.ok(nodes['#budgetRows'].innerHTML.includes('$110.75'));
+ assert.equal(run("limit(billLine,'week')"),110.75);
+ assert.equal(run("limit(billLine,'month')"),110.75);
+ assert.equal(run("limit(billLine,'year')"),281.50);
+ assert.equal(run("budgetTotal('year')"),281.50);
+ run("bp='month';renderBudgets()");
+ assert.ok(nodes['#budgetRows'].innerHTML.includes('$110.75'));
+ run("bp='year';renderBudgets()");
+ assert.ok(nodes['#budgetRows'].innerHTML.includes('$281.50'));
+ run("bills()[0].day=20;bp='week';renderBudgets()");
+ assert.ok(!nodes['#budgetRows'].innerHTML.includes('Variable utility'));
+ assert.equal(run("budgetTotal('week')"),0);
+ // A week spanning months uses the due occurrence's month, including next year.
+ run("bills()[0].day=1;billLine.billAmounts={'2026-11':12,'2026-12':22,'2027-01':33}");
+ assert.equal(run("limit(billLine,'week',new Date(2026,10,30,12))"),22);
+ assert.equal(run("limit(billLine,'week',new Date(2026,11,31,12))"),33);
+ assert.equal(run("limit(billLine,'year',new Date(2027,0,2,12))"),33);
+ // Due day 31 clamps to February's last day, preserving the full amount.
+ run("bills()[0].day=31;billLine.billAmounts={'2028-02':47.25}");
+ assert.equal(run("limit(billLine,'week',new Date(2028,1,29,12))"),47.25);
+ // Unset due bills stay visible at $0; the yearly total does not invent amounts.
+ run("bills()[0].day=6;bills()[0].monthlyAmounts={};syncBillBudgets();bp='week';renderBudgets()");
+ assert.ok(nodes['#budgetRows'].innerHTML.includes('Variable utility'));
+ assert.equal(run("limit(billLine,'week')"),0);
+ assert.equal(run("limit(billLine,'year')"),0);
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
