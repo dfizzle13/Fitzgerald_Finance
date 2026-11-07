@@ -206,13 +206,13 @@ class Handler(BaseHTTPRequestHandler):
     def dispatch(self, method):
         try:
             host = urlsplit('//' + self.headers.get('Host', '')).hostname or ''
-            trusted = host.lower() in ('localhost', socket.gethostname().lower()) or host.lower().endswith('.ts.net')
+            trusted = host.lower() in ('localhost', socket.gethostname().lower())
             try:
                 trusted = trusted or ipaddress.ip_address(host).is_private
             except ValueError:
                 pass
             if not trusted:
-                raise APIError(403, 'Use the local PC address or its private Tailscale address.')
+                raise APIError(403, 'Use the local PC address.')
             path = urlsplit(self.path).path
             if path.startswith('/api/'):
                 if method != 'GET':

@@ -11,17 +11,13 @@ This is the shared PC-hosted edition. The server uses Python 3.11+ and SQLite, w
 
 The database is `Database/finance.sqlite3`. Source code pushes never upload it. The app has a save-status banner and polls for other-device changes every three seconds when no edit dialog is open. Independent changes merge. If both devices edit the same field, the second change stays on the device with download/reload controls; it never silently overwrites the first edit. Unsaved changes are retained in that browser until saved or explicitly discarded. Reconnect and use Retry save after a network interruption.
 
-## Phone access at home and away (recommended)
+## Access
 
-1. Install Tailscale on this PC and both phones, and add the devices/users to your private Tailscale network. Authorize only household members.
-2. On this PC, while signed into Tailscale, run `tailscale serve --bg http://127.0.0.1:8088` in an administrator terminal and approve HTTPS if prompted.
-3. Or, after signing in to Tailscale, run `Server/Enable-Tailscale.ps1` to configure private Serve, enable secure cookies, and restart the finance server.
-4. Open the HTTPS address printed by Tailscale on both phones, while Tailscale is connected. Sign in with each household account. Add the web page to the phone's home screen if desired. No new APK is needed.
-5. If you configured Serve manually, after verifying HTTPS, set `secureCookie` to `true` in `Server/settings.json` and restart the server with Stop-Server.ps1 then Start-Server.ps1. Use the HTTPS address from then on.
+The default address is **http://localhost:8088**, available on the hosting PC. The server binds to `127.0.0.1`; remote phone access is not configured.
 
-Tailscale sign-in and device invitations must be completed by you. Tailscale is not installed by the server. This app is intended for private household hosting, not anonymous public internet exposure. Tailscale Serve keeps the server bound to localhost; it does not require router port forwarding. Do not publish the database or the Server directory.
+For access on the same home Wi-Fi, the server supports setting `host` to `0.0.0.0` in `Server/settings.json`, then restarting and allowing its port only on Windows Firewall's Private network profile. Phones would use the PC's local network address. This does not provide away-from-home access or HTTPS. No external networking client is required by the app.
 
-For home-Wi-Fi-only access, set `host` to `0.0.0.0` in settings.json and restart. Allow the Python server on Windows Firewall **Private networks only**, then use `http://YOUR-PC-LAN-IP:8088` from a phone on the same Wi-Fi. HTTP on a LAN is not encrypted; private HTTPS via Tailscale is the preferred setup. Do not expose this port on the public router.
+Keep `secureCookie` false for the current localhost HTTP setup. This option is available for a future HTTPS deployment, but no internet-facing endpoint, router forwarding, or external access service is configured by this project.
 
 ## Keeping it available
 
