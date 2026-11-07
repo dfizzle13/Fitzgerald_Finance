@@ -194,6 +194,19 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Monthly Spend Remaining</label><strong>$0.00</strong>'));
  assert.ok(nodes['#overviewStats'].innerHTML.includes('Over plan by $860.00'));
  assert.ok(nodes['#overviewStats'].innerHTML.includes('Over plan by $260.00'));
+
+ // Coming up includes tomorrow through day seven, never today, past dates or day eight.
+ run("D().bills=[3,4,5,11,12].map(function(day){return {id:'day'+day,name:'Due day '+day,day:day,frequency:'monthly',active:true,monthlyAmounts:{'2026-11':10}}});renderWeekBills()");
+ assert.equal(run('upcomingBillItems().map(function(x){return x.date}).join(",")'),'2026-11-05,2026-11-11');
+ assert.ok(nodes['#weekBills'].innerHTML.includes('Due day 5'));
+ assert.ok(nodes['#weekBills'].innerHTML.includes('Due day 11'));
+ assert.ok(!nodes['#weekBills'].innerHTML.includes('Due day 4'));
+ assert.ok(!nodes['#weekBills'].innerHTML.includes('Due day 3'));
+ assert.ok(!nodes['#weekBills'].innerHTML.includes('Due day 12'));
+ run("D().bills=[{id:'dec',name:'December',day:31,frequency:'monthly',active:true},{id:'jan',name:'January',day:4,month:1,frequency:'yearly',active:true},{id:'late',name:'Too late',day:5,month:1,frequency:'yearly',active:true}]");
+ assert.equal(run('upcomingBillItems(new Date(2026,11,28,12)).map(function(x){return x.date}).join(",")'),'2026-12-31,2027-01-04');
+ run('D().bills=[];renderWeekBills()');
+ assert.ok(nodes['#weekBills'].innerHTML.includes('No bills due in the next 7 days.'));
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
