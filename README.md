@@ -2,6 +2,10 @@
 
 A responsive, installable-style household budgeting app prototype for manually tracking purchases, budget lines, income, and the net unassigned slush balance.
 
+## Shared household hosting
+
+The shared PC server, database, account setup, data import, and phone-access instructions are in [Server/README.md](Server/README.md). Start with **Start Fitzgerald Finance.cmd**, then open **http://localhost:8088**. Both household logins share one budget. The remaining local-account notes below apply to the standalone edition.
+
 ## Run locally
 
 Open `index.html` through a local web server. For example, run `python -m http.server 8000` in this directory and open `http://localhost:8000`. HTTPS or localhost is required for WebAuthn device-authenticator enrollment. The repository also includes a web app manifest, SVG icon, and service worker for an installable/offline app shell when hosted over HTTPS.

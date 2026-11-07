@@ -22,3 +22,12 @@ jobs:
           JSON.parse(fs.readFileSync('manifest.webmanifest', 'utf8'));
           console.log('Validated ' + scripts.length + ' inline scripts and manifest JSON.');
           NODE
+      - name: Set up Python for the household server checks
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check budgeting and shared synchronization
+        run: |
+          node tests/bills.test.cjs
+          node tests/shared-client.test.cjs
+          python -m unittest discover -s tests -p test_server.py

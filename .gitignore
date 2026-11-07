@@ -1,0 +1,8 @@
+# Private runtime data must never be committed.
+Database/*
+!Database/README.md
+Server/*.log
+Server/*.pid
+**/__pycache__/
+*.pyc
+work/
