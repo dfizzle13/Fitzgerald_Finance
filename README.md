@@ -24,7 +24,7 @@ Change this password before recording real household finances. New registrations
 
 ## Budget and slush accounting
 
-A line item's amount is entered for its selected cadence. Weekly plans are converted to month/year equivalents, monthly plans to week/year equivalents, and annual plans to week/month equivalents. Actual spending follows the date on each transaction. The displayed slush balance is the running net of all income less all recorded outflows; tracked over-budget coverage identifies the portion of outflows that crossed a budget limit. Coverage is reported separately so those dollars are not deducted from the same net balance twice.
+A line item's amount is entered for its selected cadence. Weekly lines appear in weekly, monthly, and yearly budgets; monthly lines appear in monthly and yearly budgets; annual lines appear only in yearly budgets. Amounts roll up to longer horizons and are never divided into shorter ones. Zero-dollar lines remain visible in their eligible views. Actual spending follows the date on each transaction. The displayed slush balance is the running net of all income less all recorded outflows; tracked over-budget coverage identifies the portion of outflows that crossed a budget limit. Coverage is reported separately so those dollars are not deducted from the same net balance twice.
 
 ## Prototype security limitations
 

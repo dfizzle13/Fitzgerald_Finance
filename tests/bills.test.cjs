@@ -54,6 +54,24 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run('budgets().length'),run('count'));
  assert.equal(run('billDueItems(2026,11).length'),0);
  assert.equal(run("billDueItems(2027,10)[0].amount"),0);
- console.log(file+': monthly bill, budget, payment and rollover checks passed');
+
+ // Budget horizons include shorter cadences, never longer ones (including $0 lines).
+ run("user.data=seed();D().activeBudgetMonth='2026-11';D().bills=[];D().budgets=['weekly','monthly','annual'].map(function(c,i){return {id:c,name:c+' test line',category:'Groceries',group:'Food',cadence:c,amount:(i+1)*100,active:true,history:[{from:'2026-01-01',cadence:c,amount:(i+1)*100}]}});D().budgets.push({id:'zero',name:'Zero yearly line',category:'Groceries',group:'Food',cadence:'annual',amount:0,active:true});$('#budgetSearch').value='';$('#budgetGroup').value='all';$('#budgetStatus').value='all';summaryMonth='current'");
+ for(const [horizon,expected] of [['week',['weekly']],['month',['weekly','monthly']],['year',['weekly','monthly','annual']]]){
+  run(`bp='${horizon}';renderBudgets()`);
+  const rows=nodes['#budgetRows'].innerHTML;
+  for(const cadence of ['weekly','monthly','annual'])assert.equal(rows.includes(cadence+' test line'),expected.includes(cadence),horizon+': '+cadence);
+  assert.equal(rows.includes('Zero yearly line'),horizon==='year');
+ }
+ assert.equal(run("limit(item('monthly'),'week',monthDate('2026-11'))"),0);
+ assert.equal(run("limit(item('annual'),'week',monthDate('2026-11'))"),0);
+ assert.equal(run("limit(item('annual'),'month',monthDate('2026-11'))"),0);
+ assert.equal(run("limit(item('weekly'),'month',monthDate('2026-11'))"),600);
+ assert.equal(run("limit(item('monthly'),'month',monthDate('2026-11'))"),200);
+ assert.ok(Math.abs(run("limit(item('monthly'),'year',monthDate('2026-11'))")-2400)<0.001);
+ assert.ok(Math.abs(run("limit(item('annual'),'year',monthDate('2026-11'))")-300)<0.001);
+ assert.equal(run("budgetTotal('week')"),100);
+ assert.equal(run("budgetTotal('month')"),800);
+ console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
