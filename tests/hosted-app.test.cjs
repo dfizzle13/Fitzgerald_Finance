@@ -4,7 +4,7 @@ const endpoint=process.argv[2];
 if(!endpoint)throw Error('This check requires the disposable server URL from test_server.py.');
 async function browser(file){
  const nodes=new Map(),storage=new Map();let cookie='';
- function node(){return {value:'all',innerHTML:'',textContent:'',disabled:false,style:{},dataset:{},options:[],childNodes:[],classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(){},querySelector(){return node()},querySelectorAll(){return []}}}
+ function node(){return {value:'all',innerHTML:'',textContent:'',disabled:false,style:{},dataset:{},options:[],childNodes:[],classList:{add(){},remove(){},toggle(name,force){this.lastToggle=[name,force]}},setAttribute(){},addEventListener(){},querySelector(){return node()},querySelectorAll(){return []}}}
  const context=vm.createContext({console,Date,Intl,Math,JSON,Number,String,Array,Object,Promise,Set,Map,Symbol,Uint8Array,TextEncoder,Error,localStorage:{setItem(k,v){storage.set(k,v)},getItem(k){return storage.get(k)||null},removeItem(k){storage.delete(k)}},document:{querySelector(s){if(!nodes.has(s))nodes.set(s,node());return nodes.get(s)},querySelectorAll(){return []},documentElement:node(),createElement:node},window:{FITZGERALD_SHARED:true,addEventListener(){},location:{reload(){}}},navigator:{},setInterval(){return 1},clearInterval(){},confirm:()=>true,alert(){},setTimeout,
  fetch:async(path,options={})=>{const response=await fetch(endpoint+path,{...options,headers:{...options.headers,...(cookie?{Cookie:cookie}:{})}});const fresh=response.headers.get('set-cookie');if(fresh)cookie=fresh.split(';')[0];return response;}});
  vm.runInContext(fs.readFileSync('shared-client.js','utf8'),context);context.FinanceServer=context.window.FinanceServer;
@@ -28,6 +28,11 @@ async function idle(app){for(let i=0;i<200&&app.run('sharedClient.saving');i++)a
   await idle(a);await idle(b);await a.run('sharedClient.poll()');
   for(const suffix of ['a','b','c'])assert.ok(a.run(`income().some(x=>x.id==='${tag}-${suffix}')`));
   assert.equal(a.nodes.get('#sharedMessage').textContent,'Saved to household server');
+  assert.deepEqual(Array.from(a.nodes.get('#sharedStatus').classList.lastToggle),['hide',true]);
+  a.run("sharedStatus('Unable to save',true)");
+  assert.deepEqual(Array.from(a.nodes.get('#sharedStatus').classList.lastToggle),['hide',false]);
+  a.run("sharedStatus('Saved to household server')");
+  assert.deepEqual(Array.from(a.nodes.get('#sharedStatus').classList.lastToggle),['hide',true]);
   assert.equal(a.run('income().filter(x=>x.id.startsWith("'+tag+'-")).length'),3);
   console.log(file+': hosted sign-in, shared saves, polling and simultaneous additions passed');
  }

@@ -132,7 +132,7 @@ html[data-theme=mono] .tablewrap table tbody tr:nth-child(even){background:#e6eb
 'use strict';
 var KEY='fitzgeraldFinance.v1',db=null,user=null,page='overview',period='week',bp='month',lp='year';
 var sharedMode=false,sharedClient=null,sharedNeedsSetup=false,sharedTimer=null;
-function sharedStatus(message,error){$('#sharedStatus').classList.remove('hide');$('#sharedMessage').textContent=message;$('#sharedStatus').style.borderColor=error?'var(--red)':'var(--line)';$('#sharedRecovery').classList.toggle('hide',!error)}
+function sharedStatus(message,error){$('#sharedStatus').classList.toggle('hide',!error);$('#sharedMessage').textContent=message;$('#sharedStatus').style.borderColor=error?'var(--red)':'var(--line)';$('#sharedRecovery').classList.toggle('hide',!error)}
 function sharedUser(result){
  var u=sharedClient.accept(result),draft=localStorage.getItem(sharedClient.draftKey());
  db={users:[u]};if(draft)sharedClient.blocked=true;enter(u);

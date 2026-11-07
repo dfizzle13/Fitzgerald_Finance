@@ -9,7 +9,7 @@ This is the shared PC-hosted edition. The server uses Python 3.11+ and SQLite, w
 3. Open **Account administration → Add household member** to create your spouse's login. Both logins use the same financial records.
 4. On the old local app/device, choose **Settings → Download account backup**. In the new server-hosted app, choose **Settings → Restore account backup**. Review the replacement confirmation: this imports the shared household data for both users. Keep the original backup until verified. Accounts/passwords are not imported from financial backups.
 
-The database is `Database/finance.sqlite3`. Source code pushes never upload it. The app has a save-status banner and polls for other-device changes every three seconds when no edit dialog is open. Independent changes merge. If both devices edit the same field, the second change stays on the device with download/reload controls; it never silently overwrites the first edit. Unsaved changes are retained in that browser until saved or explicitly discarded. Reconnect and use Retry save after a network interruption.
+The database is `Database/finance.sqlite3`. Source code pushes never upload it. The app saves in the background, displays recovery controls if saving fails, and polls for other-device changes every three seconds when no edit dialog is open. Independent changes merge. If both devices edit the same field, the second change stays on the device with download/reload controls; it never silently overwrites the first edit. Unsaved changes are retained in that browser until saved or explicitly discarded. Reconnect and use Retry save after a network interruption.
 
 ## Access
 
