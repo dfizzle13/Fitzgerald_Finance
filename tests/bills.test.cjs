@@ -117,6 +117,15 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run("limit(billLine,'week',new Date(2026,10,8,12))"),0);
  run('renderCalendar()');
  assert.ok(nodes['#billCalendar'].innerHTML.startsWith('<div class="calendar-head">Sun</div>'));
+
+ // MTD cash uses the current calendar month through today, independent of weekly view/active budget.
+ run("D().activeBudgetMonth='2026-10';D().transactions=[{id:'mtd1',date:'2026-11-01',amount:125},{id:'mtd2',date:'2026-11-04',amount:75},{id:'old',date:'2026-10-31',amount:999},{id:'future',date:'2026-11-05',amount:888}];D().incomes=[{id:'pay',source:'Pay',date:'2026-11-02',amount:1000},{id:'oldpay',date:'2026-10-31',amount:777},{id:'futurepay',date:'2026-11-05',amount:666}];period='week';renderOverview()");
+ assert.equal(run('monthToDateTotal(expenses())'),200);
+ assert.equal(run('monthToDateTotal(income())'),1000);
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('MTD Net Cash'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('$1,000.00 income − $200.00 spending = $800.00'));
+ run("D().incomes=[];renderOverview()");
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('$0.00 income − $200.00 spending = -$200.00'));
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
