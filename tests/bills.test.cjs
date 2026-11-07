@@ -137,11 +137,30 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run('monthToDateTotal(expenses())'),200);
  assert.equal(run('monthToDateTotal(income())'),1000);
  assert.ok(nodes['#overviewStats'].innerHTML.includes('MTD Net Cash'));
- assert.ok(nodes['#overviewStats'].innerHTML.includes('<strong>$800.00</strong>'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<strong>$577.00</strong>'));
  assert.ok(!nodes['#overviewStats'].innerHTML.includes(' spending = '));
  run("D().incomes=[];renderOverview()");
  assert.ok(nodes['#overviewStats'].innerHTML.includes('<strong>-$200.00</strong>'));
 
+
+ // Last month's income funds this month; YTD aligns Dec-Oct funding with Jan-Nov spending.
+ run("D().incomes=[{date:'2025-11-30',amount:9000},{date:'2025-12-31',amount:1000},{date:'2026-01-31',amount:800},{date:'2026-10-01',amount:600},{date:'2026-10-31',amount:50},{date:'2026-11-01',amount:7000},{date:'2026-12-01',amount:8000}];D().transactions=[{date:'2025-12-31',amount:9999},{date:'2026-01-01',amount:700},{date:'2026-02-28',amount:750},{date:'2026-11-01',amount:200},{date:'2026-11-04',amount:25},{date:'2026-11-05',amount:999},{date:'2026-12-01',amount:999}];renderOverview();renderSlush()");
+ assert.equal(run('cashTotals().monthIncome'),650);
+ assert.equal(run('cashTotals().monthSpending'),225);
+ assert.equal(run('cashTotals().ytdIncome'),2450);
+ assert.equal(run('cashTotals().ytdSpending'),1675);
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<strong>$425.00</strong>'));
+ assert.ok(nodes['#slushStats'].innerHTML.includes('YTD slush balance'));
+ assert.ok(nodes['#slushStats'].innerHTML.includes('<strong>$775.00</strong>'));
+ // January uses December income and no previous-year expenses or accumulated balance.
+ assert.equal(run('cashTotals(new Date(2026,0,1,12)).monthIncome'),1000);
+ assert.equal(run('cashTotals(new Date(2026,0,1,12)).ytdIncome'),1000);
+ assert.equal(run('cashTotals(new Date(2026,0,1,12)).ytdSpending'),700);
+ // Missing income and deficits stay visible; no double deduction for coverage.
+ run("D().incomes=[];renderSlush()");
+ assert.ok(nodes['#slushStats'].innerHTML.includes('<strong>-$1,675.00</strong>'));
+ run("D().transactions=[];renderSlush()");
+ assert.ok(nodes['#slushStats'].innerHTML.includes('<strong>$0.00</strong>'));
  // YTD allocations follow historical changes, with no future periods or backfilled creation dates.
  run("D().bills=[];D().budgets=[{id:'changingWeekly',name:'Weekly groceries',cadence:'weekly',amount:200,history:[{from:'2026-01-01',cadence:'weekly',amount:100},{from:'2026-01-11',cadence:'weekly',amount:150},{from:'2026-02-01',cadence:'weekly',amount:200}]},{id:'changingMonthly',name:'Monthly gas',cadence:'monthly',amount:90,history:[{from:'2026-01-01',cadence:'monthly',amount:40},{from:'2026-02-01',cadence:'monthly',amount:60},{from:'2026-12-01',cadence:'monthly',amount:90}]},{id:'newMonthly',name:'New monthly',cadence:'monthly',amount:25,history:[{from:'2026-11-01',cadence:'monthly',amount:25}]}]");
  assert.equal(run("limit(item('changingWeekly'),'year',new Date(2026,0,12,12))"),350);
