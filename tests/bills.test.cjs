@@ -123,9 +123,10 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run('monthToDateTotal(expenses())'),200);
  assert.equal(run('monthToDateTotal(income())'),1000);
  assert.ok(nodes['#overviewStats'].innerHTML.includes('MTD Net Cash'));
- assert.ok(nodes['#overviewStats'].innerHTML.includes('$1,000.00 income − $200.00 spending = $800.00'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<strong>$800.00</strong>'));
+ assert.ok(!nodes['#overviewStats'].innerHTML.includes(' spending = '));
  run("D().incomes=[];renderOverview()");
- assert.ok(nodes['#overviewStats'].innerHTML.includes('$0.00 income − $200.00 spending = -$200.00'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<strong>-$200.00</strong>'));
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
