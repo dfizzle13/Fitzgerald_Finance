@@ -33,3 +33,11 @@ This is a local-first prototype, not a production account system. Password hashe
 ## Deploy with GitHub Pages
 
 The workflow in `.github/workflows/pages.yml` publishes the static app when pushed to `main`. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions** if it is not already selected. WebAuthn requires HTTPS on the deployed origin. Storage is isolated by browser and device; accounts do not synchronize between devices.
+
+## Calendar bills and monthly budgets
+
+Each recurring bill automatically receives a monthly budget line (existing linked lines are retained). Use **Set amount** beside a bill in the calendar’s payment list to enter that month’s amount. Unset months start at $0, including yearly bills in their next due year. The same amount funds the budget line and is recorded when you mark the bill paid. A positive amount is required before recording payment; setting it does not itself record spending. Paid months retain their amounts.
+
+Existing recurring amounts are migrated into the active budget month, with recorded bill payments retained for their historical months. Archived budget snapshots remain unchanged. View them using **Archived budgets** at the bottom of the Budget tab; Summary always shows the active plan.
+
+Run the source regression checks with `node tests/bills.test.cjs`. A commit containing `[skip apk]` skips the automatic Android build; the APK workflow can still be run manually.
