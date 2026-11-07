@@ -40,9 +40,11 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
  .main{padding-bottom:calc(125px + env(safe-area-inset-bottom))}
  .top .settingsShortcut{display:none}
  .tablewrap{overflow:visible;border:0;border-radius:0;background:transparent}
- .tablewrap table{width:100%;min-width:0;border-collapse:separate;border-spacing:0;table-layout:fixed;background:transparent}
+ /* Cards must leave native table layout so desktop colgroup widths cannot constrain the mobile tbody. */
+ .tablewrap table{display:block;width:100%;min-width:0;border-collapse:separate;border-spacing:0;table-layout:fixed;background:transparent}
+ .tablewrap table colgroup{display:none}
  .tablewrap table thead{display:none}
- .tablewrap table tbody{display:grid;gap:10px}
+ .tablewrap table tbody{display:grid;width:100%;grid-template-columns:minmax(0,1fr);gap:10px}
  .tablewrap table tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 12px;padding:13px;background:var(--surface);border:1px solid var(--line);border-radius:13px;box-shadow:0 2px 8px #00000006;min-width:0}
  .tablewrap table tbody td{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-width:0;padding:0!important;border:0!important;text-align:left;font-size:12px;line-height:1.4;overflow-wrap:anywhere;white-space:normal}
  .tablewrap table tbody td:before{content:attr(data-label);display:block;color:var(--muted);font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
