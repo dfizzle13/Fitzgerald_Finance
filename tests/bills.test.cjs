@@ -15,14 +15,19 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  syncBillBudgets();
  `,context);
  const run=s=>vm.runInContext(s,context);
+ const setClock=(y,m,d)=>{context.Date=class extends Date {constructor(...args){super(...(args.length?args:[y,m-1,d,12]))}static now(){return new Date(y,m-1,d,12).getTime()}}};
+ setClock(2026,11,7);
  assert.equal(run('budgets().length'),1);
  assert.equal(run("billAmount(bills()[0],'2026-11-30')"),85);
  assert.equal(run("billAmount(bills()[0],'2026-12-31')"),0);
  assert.equal(run("billDueItems(2026,10)[0].date"),'2026-11-30');
  run("markBillPaid('electric','2026-11-30');markBillPaid('electric','2026-11-30')");
  assert.equal(run('expenses().length'),1);
+ assert.equal(run('expenses()[0].date'),'2026-11-07');
+ assert.equal(run('expenses()[0].billDueDate'),'2026-11-30');
  assert.equal(run('coverage()[0].over'),0);
  assert.equal(run("limit(budgets()[0],'month',monthDate('2026-12'))"),0);
+ setClock(2026,12,7);
  run("bills()[0].monthlyAmounts['2026-12']=112.34;syncBillBudgets();markBillPaid('electric','2026-12-31')");
  assert.equal(run('expenses()[1].amount'),112.34);
  assert.equal(run('coverage()[1].over'),0);
@@ -37,6 +42,7 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  run("summaryMonth='current';renderBudgets()");
  assert.match(nodes['#budgetMonthHeading'].textContent,/Budget for/);
  assert.ok(html.indexOf('id="summaryMonthSelect"')>html.indexOf('id="budgetRows"'));
+ setClock(2027,2,3);
  // A new month cannot silently record a zero-dollar payment.
  const before=run('expenses().length');
  run("markBillPaid('electric','2027-02-28')");
@@ -49,6 +55,7 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  run("markBillPaid('electric','2027-02-28')");
  assert.equal(run('expenses().length'),before+1);
  assert.equal(run('coverage().slice(-1)[0].over'),0);
+ setClock(2026,11,7);
  // A legacy bill linked to an existing plan reuses that line.
  run("user.data=seed();D().activeBudgetMonth='2026-11';var existing=budgets()[0];D().bills=[{id:'linked',name:'Linked bill',category:existing.category,budgetId:existing.id,amount:40,frequency:'yearly',month:11,day:15}];var count=budgets().length;syncBillBudgets()");
  assert.equal(run('budgets().length'),run('count'));
@@ -233,6 +240,22 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run("focusSpending(budgets()[0],'month')"),0);
  run("D().transactions[0].date='2026-10-20';bills()[0].paid={'2026-10-20':true};renderOverview()");
  assert.equal(run("focusSpending(budgets()[0],'month')"),0);
+
+ // Payment dates are the day of marking paid, for early and late bills and next-year dues.
+ run("user.data=seed();D().budgets=[];D().bills=[{id:'early',name:'Early bill',category:'Electricity',frequency:'monthly',day:20,monthlyAmounts:{'2026-11':85}},{id:'late',name:'Late bill',category:'Internet',frequency:'monthly',day:1,monthlyAmounts:{'2026-11':75}},{id:'nextYear',name:'Next year bill',category:'Electricity',frequency:'yearly',month:1,day:1,monthlyAmounts:{'2027-01':25}}];markBillPaid('early','2026-11-20');markBillPaid('late','2026-11-01');markBillPaid('nextYear','2027-01-01')");
+ assert.equal(run('expenses().map(function(t){return t.date}).join(",")'),'2026-11-04,2026-11-04,2026-11-04');
+ assert.equal(run('expenses().map(function(t){return t.billDueDate}).join(",")'),'2026-11-20,2026-11-01,2027-01-01');
+ assert.equal(run("sum(expenses(),'year')"),185);
+ assert.equal(run("sum(expenses(),'all')"),185);
+ run("markBillPaid('early','2026-11-20');markBillPaid('early','2026-11-21');markBillPaid('nextYear','2027-01-01')");
+ assert.equal(run('expenses().length'),3);
+ assert.equal(run("bills()[0].paid['2026-11-20']"),true);
+ run("lp='year';renderLedger()");
+ assert.ok(nodes['#ledgerRows'].innerHTML.includes('2026-11-04'));
+ assert.ok(!nodes['#ledgerRows'].innerHTML.includes('<td>2027-01-01</td>'));
+ const yearStats=nodes['#ledgerStats'].innerHTML.replaceAll('Year to date','PERIOD');
+ run("lp='all';renderLedger()");
+ assert.equal(nodes['#ledgerStats'].innerHTML.replaceAll('All time','PERIOD'),yearStats);
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
