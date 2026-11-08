@@ -1,6 +1,6 @@
 # Fitzgerald Finance
 
-A responsive, installable-style household budgeting app prototype for manually tracking purchases, budget lines, income, and the net unassigned slush balance.
+A responsive, installable-style shared household budgeting app for manually tracking purchases, budget lines, income, and the net unassigned slush balance.
 
 ## Shared household hosting
 
@@ -18,7 +18,7 @@ The first server setup creates an administrator chosen by the household; there i
 - Preloaded household categories for housing, utilities, food, transportation, health, family, pets, personal spending, gifts, giving, Christmas, travel, savings, debt, work, and miscellaneous spending.
 - Manually dated purchases and income entries, edit/delete flows, searchable ledgers, CSV exports, and JSON backup/restore.
 - Automatic over-budget flagging and a coverage ledger that records the portion exceeding each line's cadence limit. Unbudgeted purchases are flagged until assigned to a budget line.
-- Five visual themes, local accounts, admin role management, and optional WebAuthn platform-authenticator sign-in with forced disable after three unsuccessful assertions.
+- Five visual themes, shared household accounts, administrator controls, and optional device biometric sign-in.
 - A small offline app shell for supported browsers.
 
 ## Budget and slush accounting
