@@ -58,3 +58,9 @@ Ledger analysis offers **This Year** (January 1–December 31, including future-
 ## Shared connectivity and device authentication
 
 The Local Server Control Panel at `C:/Users/danie/Documents/Local Server Control Panel` routes the existing ngrok domain: InvestAI retains its root API/token, while Finance uses `/finance/`. **Server connectivity** on Settings and sign-in tests and saves that address per device. Shared-server biometric sign-in now uses device-held credentials; fingerprint/face templates remain with the OS. See [Server/README.md](Server/README.md). The current APK includes native shared-server support.
+
+## Budget recurrence and category suggestions
+
+New budget lines have Recurring / One time selection. Recurring remains the default for existing lines. A one-time line has a budget date and is allocated once, without renewing in later weeks, months, or years. Its selected weekly/monthly/annual view still controls which horizons it appears in. Historical recurring allocations remain in yearly totals when a line changes to one time; the one-time spending allowance does not reset each month.
+
+Line names suggest a matching category. The category remains editable, and a manual choice is preserved while editing the name. Group is read-only and follows the selected category. Calendar payment cards keep full names and notes above their amount/status and action rows.

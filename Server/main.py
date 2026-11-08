@@ -72,9 +72,13 @@ def validate_data(data):
             if key == 'budgets':
                 if row.get('cadence') not in ('weekly', 'monthly', 'annual'):
                     raise APIError(400, 'Invalid budget cadence.')
+                if row.get('recurrence', 'recurring') not in ('recurring', 'one-time') or (row.get('recurrence') == 'one-time' and not valid_date(row.get('budgetDate'))):
+                    raise APIError(400, 'Choose recurring or a one-time budget with a valid date.')
                 for entry in row.get('history', []):
                     if not isinstance(entry, dict) or not valid_date(entry.get('from')) or entry.get('cadence') not in ('weekly', 'monthly', 'annual') or type(entry.get('amount')) not in (int, float) or not math.isfinite(entry['amount']) or entry['amount'] < 0:
                         raise APIError(400, 'Invalid budget history.')
+                    if entry.get('recurrence', 'recurring') not in ('recurring', 'one-time') or (entry.get('recurrence') == 'one-time' and not valid_date(entry.get('budgetDate'))):
+                        raise APIError(400, 'Invalid budget recurrence history.')
     if data.get('activeBudgetMonth') and not valid_date(str(data['activeBudgetMonth']) + '-01'):
         raise APIError(400, 'Invalid active budget month.')
     # Device authenticator identifiers are never shared between phones.

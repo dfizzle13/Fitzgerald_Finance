@@ -115,6 +115,16 @@ class HouseholdServerTests(unittest.TestCase):
         result = subprocess.run(['node', 'tests/hosted-app.test.cjs', self.url], cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True, timeout=25)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         print(result.stdout)
+    def test_one_time_budgets_validate_and_sync(self):
+        line={'id':'one-time','name':'Repair','cadence':'monthly','amount':250,'recurrence':'one-time','budgetDate':'2026-11-08','history':[{'from':'2026-11-01','cadence':'monthly','amount':250,'recurrence':'one-time','budgetDate':'2026-11-08'}]}
+        data=dict(DATA,budgets=[line])
+        self.assertEqual(self.admin.call('/api/state','PUT',{'revision':1,'data':data})[0],200)
+        second=Client(self.url)
+        self.assertEqual(second.call('/api/login','POST',{'username':'householdAdmin','password':PASSWORD})[0],200)
+        self.assertEqual(second.call('/api/state')[1]['data']['budgets'][0]['recurrence'],'one-time')
+        for changed in (dict(line,recurrence='daily'),dict(line,budgetDate='2026-02-31'),dict(line,history=[dict(line['history'][0],budgetDate='bad')])):
+            self.assertEqual(self.admin.call('/api/state','PUT',{'revision':2,'data':dict(DATA,budgets=[changed])})[0],400)
+        self.assertEqual(second.call('/api/state')[1]['data']['budgets'][0],line)
     def test_data_validation_and_password_hashing(self):
         self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 1, 'data': {'budgets': 'wrong'}})[0], 400)
         self.assertEqual(self.admin.call('/api/users', 'POST', {'username': 'spouse', 'password': 'short'})[0], 400)

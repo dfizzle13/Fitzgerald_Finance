@@ -274,6 +274,30 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  // Summary/Slush YTD still stop at today.
  assert.equal(run("sum(expenses(),'year')"),10);
  assert.equal(run('cashTotals().ytdSpending'),10);
+ // One-time allocations appear once and never renew across weeks, months, or years.
+ setClock(2026,11,8);
+ run("user.data=seed();D().activeBudgetMonth='2026-11';D().budgets=[{id:'once',name:'One-time groceries',category:'Groceries',group:'Food',cadence:'weekly',recurrence:'one-time',budgetDate:'2026-11-08',amount:80,history:[{from:'2026-11-01',cadence:'weekly',recurrence:'one-time',budgetDate:'2026-11-08',amount:80}]}];D().bills=[];D().transactions=[];var once=budgets()[0]");
+ assert.equal(run("limit(once,'week',new Date(2026,10,8,12))"),80);
+ assert.equal(run("limit(once,'week',new Date(2026,10,15,12))"),0);
+ assert.equal(run("limit(once,'month',new Date(2026,10,1,12))"),80);
+ assert.equal(run("limit(once,'month',new Date(2026,11,1,12))"),0);
+ assert.equal(run("limit(once,'year',new Date(2026,11,31,12))"),80);
+ assert.equal(run("limit(once,'year',new Date(2027,0,10,12))"),0);
+ run("D().transactions=[{id:'once1',budgetId:'once',date:'2026-11-08',amount:50},{id:'once2',budgetId:'once',date:'2026-12-01',amount:50}]");
+ assert.equal(run('coverage()[1].over'),20);
+ run("D().transactions=[];once.amount=0;once.history[0].amount=0");
+ assert.equal(run("fitsBudgetHorizon(once,'week')"),true);
+ run("once.amount=80;once.history[0].amount=80;once.budgetDate='2026-11-22';once.history[0].budgetDate='2026-11-22'");
+ assert.equal(run("fitsBudgetHorizon(once,'week')"),false);
+ assert.equal(run("limit(once,'year')"),0);
+ run("once.cadence='monthly';once.budgetDate='2026-11-08';once.amount=250;once.history=[{from:'2026-01-01',cadence:'monthly',amount:100},{from:'2026-11-01',cadence:'monthly',amount:250,recurrence:'one-time',budgetDate:'2026-11-08'}]");
+ assert.equal(run("limit(once,'year')"),1250);
+ assert.equal(run("limit(once,'year',new Date(2026,11,31,12))"),1250);
+ assert.equal(run("limit(once,'year',new Date(2027,0,10,12))"),0);
+ assert.equal(run("suggestBudgetCategory('Electric bill')"),'Electricity');
+ assert.equal(run("suggestBudgetCategory('Natural gas bill')"),'Natural gas');
+ assert.equal(run("suggestBudgetCategory('Gasoline')"),'Fuel');
+ assert.equal(run("suggestBudgetCategory('Weekend groceries')"),'Groceries');
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
