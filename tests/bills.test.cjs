@@ -188,19 +188,30 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.ok(nodes['#pulse'].innerHTML.includes('No annual budget items yet'));
 
  // Summary remaining cards use their own current horizons, and coverage is always YTD.
- run("user.data=seed();D().activeBudgetMonth='2026-10';D().budgets=[{id:'w',name:'Weekly',cadence:'weekly',amount:100,history:[{from:'2026-01-01',cadence:'weekly',amount:100}]},{id:'m',name:'Monthly',cadence:'monthly',amount:200,history:[{from:'2026-01-01',cadence:'monthly',amount:200}]}];D().bills=[{id:'due',name:'Due bill',category:'Electricity',frequency:'monthly',day:6,monthlyAmounts:{'2026-11':100},active:true}];syncBillBudgets();D().transactions=[{id:'priorYear',date:'2025-12-31',amount:20},{id:'priorWeek',date:'2026-01-03',amount:30},{id:'current',date:'2026-11-02',amount:60},{id:'future',date:'2026-11-05',amount:1000}];period='week';renderOverview()");
- assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Weekly Spend Remaining</label><strong>$140.00</strong>'));
+ run("user.data=seed();D().activeBudgetMonth='2026-10';D().budgets=[{id:'w',name:'Weekly',cadence:'weekly',amount:100,history:[{from:'2026-01-01',cadence:'weekly',amount:100}]},{id:'m',name:'Monthly',cadence:'monthly',amount:200,history:[{from:'2026-01-01',cadence:'monthly',amount:200}]}];D().bills=[{id:'due',name:'Due bill',category:'Electricity',frequency:'monthly',day:6,monthlyAmounts:{'2026-11':100},active:true}];syncBillBudgets();D().transactions=[{id:'priorYear',date:'2025-12-31',amount:20},{id:'priorWeek',date:'2026-01-03',amount:30},{id:'current',budgetId:'w',date:'2026-11-02',amount:60},{id:'future',date:'2026-11-05',amount:1000}];period='week';renderOverview()");
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Weekly Spend Remaining</label><strong>$40.00</strong>'));
  assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Monthly Spend Remaining</label><strong>$740.00</strong>'));
- assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Slush Coverage</label><strong>$90.00</strong>'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Slush Coverage</label><strong>$30.00</strong>'));
  const summaryCards=nodes['#overviewStats'].innerHTML;
  run("period='year';renderOverview()");
  assert.equal(nodes['#overviewStats'].innerHTML,summaryCards);
- run("D().transactions.push({id:'overspend',date:'2026-11-03',amount:1000});renderOverview()");
+ run("D().transactions.push({id:'overspend',budgetId:'w',date:'2026-11-03',amount:1000});renderOverview()");
  assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Weekly Spend Remaining</label><strong>$0.00</strong>'));
  assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Monthly Spend Remaining</label><strong>$0.00</strong>'));
- assert.ok(nodes['#overviewStats'].innerHTML.includes('Over plan by $860.00'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('Over plan by $960.00'));
  assert.ok(nodes['#overviewStats'].innerHTML.includes('Over plan by $260.00'));
 
+ // Weekly Summary uses only weekly-labelled non-calendar lines and their own spending.
+ setClock(2026,11,4);
+ run("user.data=seed();D().activeBudgetMonth='2026-11';D().budgets=[{id:'sw',name:'Weekly groceries',cadence:'weekly',amount:100,history:[{from:'2026-01-01',cadence:'weekly',amount:100}]},{id:'swOnce',name:'Weekly one time',cadence:'weekly',recurrence:'one-time',budgetDate:'2026-11-04',amount:40,history:[{from:'2026-11-01',cadence:'weekly',recurrence:'one-time',budgetDate:'2026-11-04',amount:40}]},{id:'sm',name:'Monthly gas',cadence:'monthly',amount:300},{id:'smOnce',name:'Monthly one time',cadence:'monthly',recurrence:'one-time',budgetDate:'2026-11-04',amount:80,history:[{from:'2026-11-01',cadence:'monthly',recurrence:'one-time',budgetDate:'2026-11-04',amount:80}]},{id:'sa',name:'Annual item',cadence:'annual',amount:600},{id:'inactive',name:'Inactive weekly',cadence:'weekly',amount:1000,active:false}];D().bills=[{id:'utility',name:'Utility calendar',category:'Electricity',frequency:'monthly',day:6,monthlyAmounts:{'2026-11':120}}];syncBillBudgets();var utilityLine=budgets().find(function(b){return b.billId==='utility'});D().transactions=[{id:'sw-tx',budgetId:'sw',date:'2026-11-03',amount:25},{id:'sw-once-tx',budgetId:'swOnce',date:'2026-11-04',amount:15},{id:'sm-tx',budgetId:'sm',date:'2026-11-04',amount:50},{id:'annual-tx',budgetId:'sa',date:'2026-11-04',amount:70},{id:'bill-tx',budgetId:utilityLine.id,billId:'utility',date:'2026-11-04',amount:120},{id:'unlinked-bill',billId:'utility',date:'2026-11-04',amount:5},{id:'mislinked-bill',budgetId:'sw',billId:'utility',date:'2026-11-04',amount:7},{id:'unassigned',date:'2026-11-04',amount:999},{id:'inactive-tx',budgetId:'inactive',date:'2026-11-04',amount:20},{id:'previous-week',budgetId:'sw',date:'2026-10-31',amount:30},{id:'future-tx',budgetId:'sw',date:'2026-11-05',amount:500}];period='week';renderOverview()");
+ assert.equal(run('weeklySummaryTotals().plan'),140);assert.equal(run('weeklySummaryTotals().spending'),40);
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Weekly Spend Remaining</label><strong>$100.00</strong>'));
+ run("D().transactions.push({id:'another-monthly-payment',budgetId:utilityLine.id,billId:'utility',date:'2026-11-04',amount:1000});utilityLine.cadence='weekly';renderOverview()");
+ assert.equal(run('weeklySummaryTotals().plan'),140);assert.equal(run('weeklySummaryTotals().spending'),40);
+ run("utilityLine.cadence='monthly';period='month';renderOverview()");
+ assert.ok(nodes['#pulse'].innerHTML.includes('Monthly gas'));assert.ok(nodes['#pulse'].innerHTML.includes('Monthly one time'));assert.ok(!nodes['#pulse'].innerHTML.includes('Utility calendar'));
+ assert.ok(nodes['#weekBills'].innerHTML.includes('Utility calendar'));
+ run("bp='week';$('#budgetSearch').value='';$('#budgetCadence').value='all';$('#budgetStatus').value='all';renderBudgets()");assert.ok(nodes['#budgetRows'].innerHTML.includes('Utility calendar'));
  // Coming up includes tomorrow through day seven, never today, past dates or day eight.
  run("D().bills=[3,4,5,11,12].map(function(day){return {id:'day'+day,name:'Due day '+day,day:day,frequency:'monthly',active:true,monthlyAmounts:{'2026-11':10}}});renderWeekBills()");
  assert.equal(run('upcomingBillItems().map(function(x){return x.date}).join(",")'),'2026-11-05,2026-11-11');
@@ -221,18 +232,18 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
   run(`$('#focusPeriods').onclick({target:{closest(){return {dataset:{period:'${selected}'}}}}})`);
   assert.equal(nodes['#overviewHeading'].textContent,'Your '+selected+', in focus');
   for(const [key,label] of Object.entries(labels))assert.equal(nodes['#pulse'].innerHTML.includes(label),key===selected);
-  assert.equal(nodes['#pulse'].innerHTML.includes('Calendar monthly'),selected==='month');
+  assert.equal(nodes['#pulse'].innerHTML.includes('Calendar monthly'),false);
   assert.ok(nodes['#pulse'].innerHTML.includes({week:'$100.00',month:'$200.00',year:'$300.00'}[selected]));
-  if(selected==='month')assert.ok(nodes['#pulse'].innerHTML.includes('$120.00'));
+  if(selected==='month')assert.ok(!nodes['#pulse'].innerHTML.includes('$120.00'));
  }
 
  // Paid-early calendar transactions use scheduled due dates, but are already spent.
  run("D().budgets=[];D().bills=[{id:'electricPaid',name:'Electric paid early',category:'Electricity',frequency:'monthly',day:20,active:true,monthlyAmounts:{'2026-11':85},paid:{'2026-11-20':true}},{id:'internetPaid',name:'Internet paid early',category:'Internet',frequency:'monthly',day:25,active:true,monthlyAmounts:{'2026-11':75},paid:{'2026-11-25':true}}];D().transactions=[{id:'pe',billId:'electricPaid',date:'2026-11-20',amount:85},{id:'pi',billId:'internetPaid',date:'2026-11-25',amount:75}];syncBillBudgets();period='month';renderOverview()");
  assert.equal(run("focusSpending(budgets().find(function(b){return b.billId==='electricPaid'}),'month')"),85);
  assert.equal(run("focusSpending(budgets().find(function(b){return b.billId==='internetPaid'}),'month')"),75);
- assert.ok(nodes['#pulse'].innerHTML.includes('$85.00 <small>/ $85.00</small>'));
- assert.ok(nodes['#pulse'].innerHTML.includes('$75.00 <small>/ $75.00</small>'));
- assert.ok(nodes['#pulse'].innerHTML.includes('100% used'));
+ assert.ok(!nodes['#pulse'].innerHTML.includes('Electric paid early'));
+ assert.ok(!nodes['#pulse'].innerHTML.includes('Internet paid early'));
+ assert.ok(nodes['#pulse'].innerHTML.includes('No monthly budget items yet'));
  // Linked transaction and bill IDs identify one expense, never two copies.
  run("syncBillBudgets();renderOverview()");
  assert.equal(run("focusSpending(budgets()[0],'month')"),85);
