@@ -56,6 +56,7 @@ public final class MainActivity extends FragmentActivity {
         host.addView(webView,new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
         // Own system-bar, cutout, and keyboard insets once, outside the WebView.
         // Android 15 enforces edge-to-edge even when decor fitting was requested.
+        // Recalculate when rotation, navigation mode, or keyboard visibility changes.
         ViewCompat.setOnApplyWindowInsetsListener(host,(view,windowInsets)->{
             Insets bars=windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()|WindowInsetsCompat.Type.displayCutout());
             Insets keyboard=windowInsets.getInsets(WindowInsetsCompat.Type.ime());
