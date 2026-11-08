@@ -355,7 +355,14 @@ class Handler(BaseHTTPRequestHandler):
         name, content_type = allowed[path]
         payload = (ROOT / name).read_bytes()
         if name == 'index.html':
-            payload = payload.replace(b'<script src="./shared-client.js">', b'<script>window.FITZGERALD_SHARED=true;</script><script src="./shared-client.js">', 1)
+            payload = payload.replace(b'<script src="./account-client.js">', b'<script>window.FITZGERALD_SHARED=true;</script><script src="./account-client.js">', 1)
+            # Android adds the ngrok bypass header to the main navigation only.
+            # Keep startup self-contained so script requests cannot become ngrok HTML warnings.
+            for client in ('account-client.js', 'connection-client.js', 'device-client.js', 'shared-client.js'):
+                source = (ROOT / client).read_bytes()
+                source = re.sub(br'</script', lambda match: b'<\\/' + match.group()[2:], source, flags=re.I)
+                tag = ('<script src="./' + client + '"></script>').encode()
+                payload = payload.replace(tag, b'<script>\n' + source + b'\n</script>', 1)
         self.send_response(200)
         self.send_header('Content-Type', content_type + '; charset=utf-8')
         self.send_header('Content-Length', str(len(payload)))

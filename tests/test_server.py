@@ -93,6 +93,11 @@ class HouseholdServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn('window.FITZGERALD_SHARED=true', html)
         self.assertNotIn('password_hash', html)
+        for client in ('account-client.js','connection-client.js','device-client.js','shared-client.js'):
+            self.assertNotIn('<script src="./'+client+'">', html)
+        self.assertIn('class FinanceServer', html)
+        self.assertIn('root.FinanceConnection=', html)
+        self.assertIn('root.FinanceAccounts=', html)
         self.assertEqual(anonymous.call('/shared-client.js')[0], 200)
         headers = {'Content-Type': 'application/json', 'X-Finance-Request': '1', 'Origin': 'https://another-site.example'}
         request = urllib.request.Request(self.url + '/api/login', data=b'{}', headers=headers)
