@@ -6,7 +6,7 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
  new vm.Script(script);
  const nodes={};
- const node=()=>({value:'all',options:[],innerHTML:'',style:{},dataset:{},classList:{add(){},remove(){},toggle(){}},addEventListener(){},querySelector(){return node()},querySelectorAll(){return []}});
+ const node=()=>({value:'all',options:[],innerHTML:'',style:{},dataset:{},classList:{add(){},remove(){},toggle(){}},addEventListener(){},querySelector(){return node()},closest(){return node()},querySelectorAll(){return []}});
  const context=vm.createContext({console,Date,Intl,Math,JSON,Number,String,Array,Object,Promise,Set,Uint8Array,TextEncoder,localStorage:{setItem(){},getItem(){return null}},document:{querySelector(s){return nodes[s]||(nodes[s]=node())},querySelectorAll(){return []},documentElement:node(),addEventListener(){}},window:{addEventListener(){}},navigator:{},confirm:()=>true,alert(){},setTimeout(){}});
  vm.runInContext(script.slice(script.indexOf("'use strict';"),script.lastIndexOf('load().then')),context);
  vm.runInContext(`
@@ -15,6 +15,19 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  syncBillBudgets();
  `,context);
  const run=s=>vm.runInContext(s,context);
+ const beforeCharitableTest=run('JSON.stringify(D())');
+ run("user.data=seed();D().categories.push({name:'Church',group:'Personal'},{name:'Giving',group:'Personal'});D().budgets=[{id:'gift',category:'Gifts',group:'Personal',amount:55},{id:'other',category:'Christmas',group:'Personal',amount:99}];D().monthlyArchives=[{budgets:[{category:'Giving / donations',group:'Personal',limit:100,actual:25}]}];migrateCharitableGiving()");
+ assert.equal(run("groupOf('Gifts')"),'Charitable Giving');
+ assert.equal(run("groupOf('Giving / donations')"),'Charitable Giving');
+ assert.equal(run("groupOf('Church / charity')"),'Charitable Giving');
+ assert.equal(run("groupOf('Church')"),'Charitable Giving');
+ assert.equal(run("groupOf('Giving')"),'Charitable Giving');
+ assert.equal(run("D().budgets[0].group"),'Charitable Giving');
+ assert.equal(run("D().budgets[0].amount"),55);
+ assert.equal(run("D().budgets[1].group"),'Personal');
+ assert.equal(run("D().monthlyArchives[0].budgets[0].group"),'Charitable Giving');
+ const charitableSnapshot=run('JSON.stringify(D())');run('migrateCharitableGiving()');assert.equal(run('JSON.stringify(D())'),charitableSnapshot);
+ context.beforeCharitableTest=beforeCharitableTest;run('user.data=JSON.parse(beforeCharitableTest)');
  const setClock=(y,m,d)=>{context.Date=class extends Date {constructor(...args){super(...(args.length?args:[y,m-1,d,12]))}static now(){return new Date(y,m-1,d,12).getTime()}}};
  setClock(2026,11,7);
  assert.equal(run('budgets().length'),1);
