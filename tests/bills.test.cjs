@@ -307,6 +307,7 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  run("$('#addBillForDay').onclick()");assert.ok(nodes['#modal'].innerHTML.includes('id="billDate" type="date" required value="2026-11-07"'));
  run("$('#billSearch').value='broadband';renderBillList()");assert.ok(nodes['#billList'].innerHTML.includes('Internet'));assert.ok(!nodes['#billList'].innerHTML.includes('Electric service'));
  run("$('#billSearch').value='no matches';renderBillList()");assert.ok(nodes['#billList'].innerHTML.includes('No bills match your search'));
+ run("bills()[0].monthlyAmounts['2026-11']=0;$('#billSearch').value='amount needed';renderBillList()");assert.ok(nodes['#billList'].innerHTML.includes('Electric service'));assert.ok(!nodes['#billList'].innerHTML.includes('<h4>Internet'));
  run('openAddMenu()');for(const action of ['expense','bill','budget','income'])assert.ok(nodes['#modal'].innerHTML.includes('data-quick-add="'+action+'"'));
  run("var futureBill={id:'future-bill',day:8,frequency:'monthly',startDate:'2027-02-08'}");
  assert.equal(run('billDate(futureBill,2027,0)'),null);assert.equal(run('billDate(futureBill,2027,1)'),'2027-02-08');
