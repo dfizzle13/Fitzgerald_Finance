@@ -13,6 +13,11 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
+import android.widget.FrameLayout;
+import android.view.ViewGroup;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.core.view.WindowCompat;
 import org.json.JSONObject;
@@ -33,10 +38,9 @@ public final class MainActivity extends FragmentActivity {
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
         connections=getSharedPreferences("finance_connection",MODE_PRIVATE);
-        WindowCompat.setDecorFitsSystemWindows(getWindow(),true);
-        getWindow().setStatusBarColor(Color.rgb(31,85,66));getWindow().setNavigationBarColor(Color.rgb(243,246,241));
-        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O)getWindow().getDecorView().setSystemUiVisibility(android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        webView=new WebView(this);webView.setBackgroundColor(Color.rgb(243,246,241));webView.setFitsSystemWindows(true);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(),false);
+        getWindow().setStatusBarColor(Color.rgb(243,246,241));getWindow().setNavigationBarColor(Color.rgb(243,246,241));
+        webView=new WebView(this);webView.setBackgroundColor(Color.rgb(243,246,241));webView.setFitsSystemWindows(false);
         WebSettings settings=webView.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setDatabaseEnabled(true);settings.setAllowFileAccess(true);settings.setAllowContentAccess(false);settings.setJavaScriptCanOpenWindowsAutomatically(false);settings.setSupportMultipleWindows(false);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);settings.setMediaPlaybackRequiresUserGesture(true);
         webView.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){return !allowed(request.getUrl().toString());}
@@ -47,7 +51,21 @@ public final class MainActivity extends FragmentActivity {
                 }
             }
         });
-        webView.setWebChromeClient(new WebChromeClient());webView.addJavascriptInterface(new FinanceBiometricBridge(this,webView),"FitzgeraldAndroid");setContentView(webView);
+        webView.setWebChromeClient(new WebChromeClient());webView.addJavascriptInterface(new FinanceBiometricBridge(this,webView),"FitzgeraldAndroid");
+        FrameLayout host=new FrameLayout(this);host.setBackgroundColor(Color.rgb(243,246,241));
+        host.addView(webView,new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
+        // Own system-bar, cutout, and keyboard insets once, outside the WebView.
+        // Android 15 enforces edge-to-edge even when decor fitting was requested.
+        ViewCompat.setOnApplyWindowInsetsListener(host,(view,windowInsets)->{
+            Insets bars=windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()|WindowInsetsCompat.Type.displayCutout());
+            Insets keyboard=windowInsets.getInsets(WindowInsetsCompat.Type.ime());
+            view.setPadding(bars.left,bars.top,bars.right,Math.max(bars.bottom,keyboard.bottom));
+            return WindowInsetsCompat.CONSUMED;
+        });
+        setContentView(host);
+        WindowCompat.getInsetsController(getWindow(),getWindow().getDecorView()).setAppearanceLightStatusBars(true);
+        WindowCompat.getInsetsController(getWindow(),getWindow().getDecorView()).setAppearanceLightNavigationBars(true);
+        ViewCompat.requestApplyInsets(host);
         String server=serverUrl();if(server.isEmpty())webView.loadUrl(LOCAL);else loadServer(server);
     }
     public void openPhoneAccounts(){

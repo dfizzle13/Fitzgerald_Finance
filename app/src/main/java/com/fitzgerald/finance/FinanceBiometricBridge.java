@@ -29,6 +29,7 @@ public final class FinanceBiometricBridge {
     @JavascriptInterface public void finishPhoneTransfer(String id){ ((MainActivity)activity).finishPhoneTransfer(id); }
     @JavascriptInterface public boolean consumePhoneTransferCompletion(){ return ((MainActivity)activity).consumePhoneTransferCompletion(); }
     @JavascriptInterface public void returnToHouseholdServer(){ ((MainActivity)activity).returnToHouseholdServer(); }
+    @JavascriptInterface public boolean handlesSystemInsets(){ return true; }
     @JavascriptInterface public String getServerUrl() { return ((MainActivity)activity).serverUrl(); }
     @JavascriptInterface public void testServer(String url,String requestId) { ((MainActivity)activity).testServer(url,requestId,false); }
     @JavascriptInterface public void connectServer(String url,String requestId) { ((MainActivity)activity).testServer(url,requestId,true); }

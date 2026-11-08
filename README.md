@@ -64,3 +64,7 @@ The Local Server Control Panel at `C:/Users/danie/Documents/Local Server Control
 New budget lines have Recurring / One time selection. Recurring remains the default for existing lines. A one-time line has a budget date and is allocated once, without renewing in later weeks, months, or years. Its selected weekly/monthly/annual view still controls which horizons it appears in. Historical recurring allocations remain in yearly totals when a line changes to one time; the one-time spending allowance does not reset each month.
 
 Line names suggest a matching category. The category remains editable, and a manual choice is preserved while editing the name. Group is read-only and follows the selected category. Calendar payment cards keep full names and notes above their amount/status and action rows.
+
+## Android system bars
+
+The Android wrapper now reserves the reported status-bar, navigation-bar, display-cutout and keyboard insets around the WebView. It consumes those insets so the web page does not count them again. The live page suppresses CSS safe areas only when the wrapper advertises this capability; older installed wrappers retain CSS safe-area protection. Native wrapper changes require one app update; no APK is built without an explicit request.

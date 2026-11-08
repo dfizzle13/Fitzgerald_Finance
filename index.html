@@ -205,10 +205,10 @@ body:has(.dlgback){overflow:hidden;overscroll-behavior:none}
  .bill-card-total{flex-direction:row;align-items:center;justify-content:space-between}
 }
 
-/* Android's host already fits the WebView inside system bars. */
+/* Only a wrapper with explicit native inset handling may suppress CSS safe areas. */
 @media(max-width:720px){
- html.native-app #root.authenticated .main{padding-top:15px}
- html.native-app #root.authenticated>.mobilebottom{padding-bottom:7px;min-height:58px}
+ html.native-insets #root.authenticated .main{padding-top:15px}
+ html.native-insets #root.authenticated>.mobilebottom{padding-bottom:7px;min-height:58px}
 }
 </style></head><body><div id="root">
 <div id="login" class="login"><div class="splash"><div class="brand"><span class="mark">F</span> Fitzgerald Finance</div><div><h1>Give every dollar a place to land.</h1></div><small>Private by design for this device · Flexible by default</small></div><div class="loginbox"><form id="loginForm" class="loginform"><div class="brand"><span class="mark">F</span> Fitzgerald Finance</div><div style="margin-top:30px" class="eyebrow">Your household workspace</div><h2 id="loginTitle">Welcome back</h2><span id="loginSub" class="hide"></span><div id="loginError" class="err hide"></div><div class="field"><label>Username</label><input id="username" autocomplete="username" required placeholder="Your username"></div><div id="passwordWrap" class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password" required placeholder="Your password"></div><button class="btn primary" id="signIn" style="width:100%">Sign in →</button><button class="btn secondary hide" id="bioSignIn" type="button" style="width:100%;margin-top:8px">◉ Sign in with biometrics</button><div class="bio-login-setting"><span>Enable biometric sign-in</span><button class="switch" id="bioSetupLogin" type="button" role="switch" aria-checked="false" aria-label="Enable biometric sign-in"><span></span></button></div><button class="btn secondary small" type="button" id="loginConnection" aria-haspopup="dialog" style="margin-top:12px;width:100%;min-height:42px">Server connectivity</button><button class="btn quiet" id="register" type="button" style="margin-top:12px;padding-left:0">Create an account</button></form></div></div>
@@ -227,7 +227,7 @@ body:has(.dlgback){overflow:hidden;overscroll-behavior:none}
 <script src="./account-client.js"></script><script src="./connection-client.js"></script><script src="./device-client.js"></script><script src="./shared-client.js"></script><script>
 (function(){
 'use strict';
-if(window.FitzgeraldAndroid)document.documentElement.classList.add('native-app');
+if(window.FitzgeraldAndroid){document.documentElement.classList.add('native-app');if(window.FitzgeraldAndroid.handlesSystemInsets&&window.FitzgeraldAndroid.handlesSystemInsets())document.documentElement.classList.add('native-insets');}
 var connectionGate=false;var KEY='fitzgeraldFinance.v1',db=null,user=null,page='overview',period='week',bp='month',lp='year';
 var sharedMode=false,sharedClient=null,sharedNeedsSetup=false,sharedTimer=null;
 function sharedStatus(message,error){
