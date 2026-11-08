@@ -295,6 +295,21 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  run("D().transactions.push({id:'old',title:'Previous year',date:'2025-12-31',amount:999},{id:'next',title:'Next year',date:'2027-01-01',amount:888});lp='year';renderLedger()");
  assert.ok(!nodes['#ledgerRows'].innerHTML.includes('Previous year'));
  assert.ok(!nodes['#ledgerRows'].innerHTML.includes('Next year'));
+ // Spending breakdowns share Ledger's full-year period and count actual outflows once.
+ const beforeBreakdowns=run('JSON.stringify(D())');
+ run("user.data=seed();D().transactions=[{id:'food1',date:'2026-01-01',category:'Groceries',group:'Food',amount:25},{id:'food2',date:'2026-12-31',category:'Groceries',amount:75},{id:'bill',billId:'paid',date:'2026-11-01',category:'Electricity',amount:50},{id:'gift',date:'2026-11-01',category:'Gifts',group:'Personal',amount:20},{id:'unknown',date:'2026-11-01',category:'Custom category',group:'Custom group',amount:10},{id:'missing',date:'2026-11-01',amount:5},{id:'old',date:'2025-12-31',category:'Groceries',amount:1000}];D().incomes=[{id:'pay',date:'2026-11-01',source:'Paycheck',amount:5000}];$('#ledgerType').value='income';lp='year';renderLedger()");
+ assert.equal(run("JSON.stringify(ledgerSpendingBreakdown(expenses().filter(function(t){return inLedgerPeriod(t.date,'year')}),'category')[0])"),JSON.stringify({name:'Groceries',amount:100}));
+ assert.ok(nodes['#ledgerCategorySpending'].innerHTML.includes('$100.00'));
+ assert.ok(nodes['#ledgerCategorySpending'].innerHTML.includes('54.1% of spending'));
+ assert.ok(nodes['#ledgerGroupSpending'].innerHTML.includes('Charitable Giving'));
+ assert.ok(nodes['#ledgerGroupSpending'].innerHTML.includes('Custom group'));
+ assert.ok(nodes['#ledgerGroupSpending'].innerHTML.includes('Other'));
+ assert.ok(nodes['#ledgerCategorySpending'].innerHTML.includes('Uncategorized'));
+ assert.ok(!nodes['#ledgerCategorySpending'].innerHTML.includes('$1,100.00'));
+ assert.equal(run("ledgerSpendingBreakdown(expenses().filter(function(t){return inLedgerPeriod(t.date,'year')}),'group').reduce(function(sum,row){return sum+row.amount},0)"),185);
+ run("lp='all';renderLedger()");assert.ok(nodes['#ledgerCategorySpending'].innerHTML.includes('$1,100.00'));
+ run('D().transactions=[];renderLedger()');assert.ok(nodes['#ledgerGroupSpending'].innerHTML.includes('No spending recorded'));
+ context.beforeBreakdowns=beforeBreakdowns;run('user.data=JSON.parse(beforeBreakdowns)');
  // Summary/Slush YTD still stop at today.
  assert.equal(run("sum(expenses(),'year')"),10);
  assert.equal(run('cashTotals().ytdSpending'),10);
