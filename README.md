@@ -68,3 +68,9 @@ Line names suggest a matching category. The category remains editable, and a man
 ## Android system bars
 
 The Android wrapper now reserves the reported status-bar, navigation-bar, display-cutout and keyboard insets around the WebView. It consumes those insets so the web page does not count them again. The live page suppresses CSS safe areas only when the wrapper advertises this capability; older installed wrappers retain CSS safe-area protection. Native wrapper changes require one app update; no APK is built without an explicit request.
+
+## Calendar shortcuts and quick add
+
+The floating Add button opens Purchase, Bill, Budget item, and Income choices. Calendar days are buttons that open a popup with that day's full bill cards, including editing, amount and payment actions. Empty days offer Add bill. The bill editor uses a changeable Due date, prefilled from the selected calendar day; new bills begin on that date and do not appear in earlier months. Existing bill series retain their original due day when editing a short-month occurrence without changing its date.
+
+Search payments below Payments this month filters the bill cards by name, category, notes, date, amount, or payment status without hiding bills in the calendar itself. Summary Week/Month/Year budget items are ordered by actual percentage used ascending, with unfunded spending last. The displayed percentage can exceed 100%, while the visual bar stays capped at its width.

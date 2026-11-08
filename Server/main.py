@@ -69,6 +69,8 @@ def validate_data(data):
                 raise APIError(400, 'Invalid monetary amount.')
             if key in ('transactions', 'incomes') and not valid_date(row.get('date')):
                 raise APIError(400, 'Use a valid transaction date.')
+            if key == 'bills' and row.get('startDate') is not None and not valid_date(row['startDate']):
+                raise APIError(400, 'Use a valid bill start date.')
             if key == 'budgets':
                 if row.get('cadence') not in ('weekly', 'monthly', 'annual'):
                     raise APIError(400, 'Invalid budget cadence.')

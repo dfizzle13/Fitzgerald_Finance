@@ -115,6 +115,11 @@ class HouseholdServerTests(unittest.TestCase):
         result = subprocess.run(['node', 'tests/hosted-app.test.cjs', self.url], cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True, timeout=25)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         print(result.stdout)
+    def test_bill_start_date_is_persisted_and_validated(self):
+        bill={'id':'future-bill','name':'Internet','frequency':'monthly','day':8,'month':2,'startDate':'2027-02-08','monthlyAmounts':{'2027-02':80}}
+        self.assertEqual(self.admin.call('/api/state','PUT',{'revision':1,'data':dict(DATA,bills=[bill])})[0],200)
+        self.assertEqual(self.admin.call('/api/state')[1]['data']['bills'][0]['startDate'],'2027-02-08')
+        self.assertEqual(self.admin.call('/api/state','PUT',{'revision':2,'data':dict(DATA,bills=[dict(bill,startDate='bad')])})[0],400)
     def test_one_time_budgets_validate_and_sync(self):
         line={'id':'one-time','name':'Repair','cadence':'monthly','amount':250,'recurrence':'one-time','budgetDate':'2026-11-08','history':[{'from':'2026-11-01','cadence':'monthly','amount':250,'recurrence':'one-time','budgetDate':'2026-11-08'}]}
         data=dict(DATA,budgets=[line])

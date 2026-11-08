@@ -298,6 +298,31 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run("suggestBudgetCategory('Natural gas bill')"),'Natural gas');
  assert.equal(run("suggestBudgetCategory('Gasoline')"),'Fuel');
  assert.equal(run("suggestBudgetCategory('Weekend groceries')"),'Groceries');
+ // Calendar days expose their full bill cards; list search does not change calendar contents.
+ setClock(2026,11,8);
+ run("user.data=seed();D().activeBudgetMonth='2026-11';D().bills=[{id:'power',name:'Electric service',category:'Electricity',frequency:'monthly',day:6,notes:'Household autopay',monthlyAmounts:{'2026-11':125}},{id:'wifi',name:'Internet',category:'Internet',frequency:'monthly',day:10,notes:'Broadband',monthlyAmounts:{'2026-11':80}}];billMonth=new Date(2026,10,1,12);$('#billSearch').value='';renderCalendar()");
+ assert.ok(nodes['#billCalendar'].innerHTML.includes('data-bill-date="2026-11-06"'));
+ run("openBillDay('2026-11-06')");assert.ok(nodes['#modal'].innerHTML.includes('Electric service'));assert.ok(!nodes['#modal'].innerHTML.includes('<h4>Internet'));
+ run("openBillDay('2026-11-07')");assert.ok(nodes['#modal'].innerHTML.includes('No bills due on this day'));
+ run("$('#addBillForDay').onclick()");assert.ok(nodes['#modal'].innerHTML.includes('id="billDate" type="date" required value="2026-11-07"'));
+ run("$('#billSearch').value='broadband';renderBillList()");assert.ok(nodes['#billList'].innerHTML.includes('Internet'));assert.ok(!nodes['#billList'].innerHTML.includes('Electric service'));
+ run("$('#billSearch').value='no matches';renderBillList()");assert.ok(nodes['#billList'].innerHTML.includes('No bills match your search'));
+ run('openAddMenu()');for(const action of ['expense','bill','budget','income'])assert.ok(nodes['#modal'].innerHTML.includes('data-quick-add="'+action+'"'));
+ run("var futureBill={id:'future-bill',day:8,frequency:'monthly',startDate:'2027-02-08'}");
+ assert.equal(run('billDate(futureBill,2027,0)'),null);assert.equal(run('billDate(futureBill,2027,1)'),'2027-02-08');
+ // Editing a short-month occurrence must not turn a day-31 series into day 28.
+ run("user.data=seed();D().budgets=[];D().bills=[{id:'monthend',name:'Month-end bill',category:'Electricity',frequency:'monthly',day:31,monthlyAmounts:{'2027-02':80}}];billMonth=new Date(2027,1,1,12);editBill('monthend','2027-02-28');$('#billName').value='Month-end bill';$('#billDate').value='2027-02-28';$('#billAmount').value='80';$('#billFreq').value='monthly';$('#billCategory').value='Electricity';$('#billNotes').value='Edited note';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run('bills()[0].day'),31);assert.equal(run('billDate(bills()[0],2027,2)'),'2027-03-31');
+ run("editBill('monthend','2027-02-28');$('#billDate').value='2027-02-27';$('#billDate').oninput();$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run('bills()[0].day'),27);
+ // Summary sorts actual usage ascending for each cadence, with unfunded spending last.
+ for(const [cadence,focus] of [['weekly','week'],['monthly','month'],['annual','year']]){
+  context.testCadence=cadence;context.testFocus=focus;
+  run("user.data=seed();D().activeBudgetMonth='2026-11';D().bills=[];D().budgets=[['low','Low usage',100],['high','High usage',100],['zero','Unused',0],['over','Over budget',100],['unfunded','Unfunded spending',0]].map(function(v){return {id:v[0],name:v[1],amount:v[2],cadence:testCadence,history:[{from:'2026-01-01',cadence:testCadence,amount:v[2]}]}});D().transactions=[{id:'a',budgetId:'low',date:'2026-11-08',amount:10},{id:'b',budgetId:'high',date:'2026-11-08',amount:80},{id:'c',budgetId:'over',date:'2026-11-08',amount:150},{id:'d',budgetId:'unfunded',date:'2026-11-08',amount:5}];period=testFocus;renderOverview()");
+  const pulse=nodes['#pulse'].innerHTML,names=['Unused','Low usage','High usage','Over budget','Unfunded spending'];
+  for(let i=1;i<names.length;i++)assert.ok(pulse.indexOf(names[i-1])<pulse.indexOf(names[i]),focus+' usage order');
+  assert.ok(pulse.includes('150% used'));assert.ok(pulse.includes('0% used'));
+ }
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
