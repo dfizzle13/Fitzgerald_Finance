@@ -4,18 +4,13 @@ A responsive, installable-style household budgeting app prototype for manually t
 
 ## Shared household hosting
 
-The shared PC server, database, account setup, data import, and phone-access instructions are in [Server/README.md](Server/README.md). Start with **Start Fitzgerald Finance.cmd**, then open **http://localhost:8088**. Both household logins share one budget. The remaining local-account notes below apply to the standalone edition.
+The shared PC server, database, account setup, data import, and phone-access instructions are in [Server/README.md](Server/README.md). Start with **Start Fitzgerald Finance.cmd**, then open **http://localhost:8088**. Both household logins share one budget. Disconnected copies are connection/transfer screens only.
 
-## Run locally
+## Open the shared app
 
-Open `index.html` through a local web server. For example, run `python -m http.server 8000` in this directory and open `http://localhost:8000`. HTTPS or localhost is required for WebAuthn device-authenticator enrollment. The repository also includes a web app manifest, SVG icon, and service worker for an installable/offline app shell when hosted over HTTPS.
+Start **Start Fitzgerald Finance.cmd**, then open **http://localhost:8088** on the PC. Phones connect to the same server through the Finance ngrok address. Static copies and APKs without a connection show a connection screen; they cannot create a separate account or budget. Account usernames, roles, password verifiers and financial records live in the PC database. Settings includes **Sign out**.
 
-## First-run account
-
-- Username: `admin`
-- Password: `password`
-
-Change this password before recording real household finances. New registrations receive the `user` role. Only an administrator can change another account's role, and the active administrator cannot change their own role. Account records and all financial data are local to the current browser profile; clearing browser storage removes them.
+The first server setup creates an administrator chosen by the household; there is no default shared password. An administrator on any connected device can add members, assign roles, reset passwords, and import older device accounts. Password resets invalidate that account's other sessions and biometric credentials.
 
 ## Included features
 
@@ -30,13 +25,17 @@ Change this password before recording real household finances. New registrations
 
 A line item's amount is entered for its selected cadence. Weekly lines appear in weekly, monthly, and yearly budgets; monthly lines appear in monthly and yearly budgets; annual lines appear only in yearly budgets. Amounts roll up to longer horizons and are never divided into shorter ones. Zero-dollar lines remain visible in their eligible views. Actual spending follows the date on each transaction. The displayed slush balance is the yearly running net of prior-month income assigned to each spending month less recorded YTD outflows; tracked over-budget coverage identifies the portion of outflows that crossed a budget limit. Coverage is reported separately so those dollars are not deducted from the same net balance twice.
 
-## Prototype security limitations
+## Server-only storage and device transfers
 
-This is a local-first prototype, not a production account system. Password hashes and financial data are stored in browser local storage; client-only role controls are not a substitute for server-side authorization. Before hosting for real family use, add a backend database, strong password hashing and rate limits, secure sessions, HTTPS, access control enforced by the server, and a migration plan. WebAuthn requests device user verification, but a browser cannot guarantee whether a platform authenticator used a fingerprint/face or device PIN. For that reason biometric sign-in authenticates directly rather than retrieving or autofilling a saved plaintext password. After three unsuccessful assertions, the local biometric preference is disabled and password sign-in is required before re-enabling it.
+The app fetches household records from the shared server and keeps working state only in memory. It does not write financial records or unsaved drafts to local storage, IndexedDB, or the offline cache. If saving fails, keep the window open and retry; closing it can discard unsaved in-memory edits. Connection preferences, username convenience metadata, session cookies and device biometric credentials can stay on the device. The offline cache contains only the static app shell. **Create server backup** writes a private snapshot on the PC. Explicit CSV reports are optional user-requested exports, not a data source.
 
-## Deploy with GitHub Pages
+To move older phone-only records: install the latest APK, choose **Transfer existing device accounts and data** on the connection screen (or **Settings -> Transfer old device data**), copy the private transfer code, connect, sign in with an existing server administrator, and use **Admin -> Import device data** on that phone. Confirm the server administrator password. Usernames already on the server are skipped. Imported passwords are preserved using scrypt-wrapped legacy verifiers, upgraded to the normal server verifier on successful password authentication. Passwords are never displayed to administrators.
 
-The workflow in `.github/workflows/pages.yml` validates JavaScript, the shared server, and Android compilation without packaging an APK. It does not deploy the household database. WebAuthn requires HTTPS on the deployed origin. Storage is isolated by browser and device; accounts do not synchronize between devices.
+The transfer can merge missing financial records; server versions win when IDs conflict. Original financial snapshots are archived privately under `Database/backups/device-transfers` for review. Android removes the old device account/financial storage only after the server confirms the same transfer. Until then the old data is preserved solely for transfer and never opened as an active budget. Transfer codes are sensitive; do not post them or commit them to Git.
+
+## Source validation and APKs
+
+The validation workflow checks budgeting, shared synchronization, account authorization and biometric authentication, plus Android compilation. The APK workflow produces a signed package when app sources change on main; `[skip apk]` skips packaging when requested.
 
 ## Calendar bills and monthly budgets
 
@@ -58,4 +57,4 @@ Ledger analysis offers **This Year** (January 1–December 31, including future-
 
 ## Shared connectivity and device authentication
 
-The Local Server Control Panel at `C:/Users/danie/Documents/Local Server Control Panel` routes the existing ngrok domain: InvestAI retains its root API/token, while Finance uses `/finance/`. **Server connectivity** on Settings and sign-in tests and saves that address per device. Shared-server biometric sign-in now uses device-held credentials; fingerprint/face templates remain with the OS. See [Server/README.md](Server/README.md). Android source changes require a later APK rebuild.
+The Local Server Control Panel at `C:/Users/danie/Documents/Local Server Control Panel` routes the existing ngrok domain: InvestAI retains its root API/token, while Finance uses `/finance/`. **Server connectivity** on Settings and sign-in tests and saves that address per device. Shared-server biometric sign-in now uses device-held credentials; fingerprint/face templates remain with the OS. See [Server/README.md](Server/README.md). The current APK includes native shared-server support.

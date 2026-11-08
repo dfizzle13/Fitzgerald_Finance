@@ -24,6 +24,11 @@ public final class FinanceBiometricBridge {
         this.vault = new SecureDeviceVault((MainActivity) activity, webView);
     }
 
+    @JavascriptInterface public void openPhoneAccounts(){ ((MainActivity)activity).openPhoneAccounts(); }
+    @JavascriptInterface public void setPhoneTransferId(String id){ ((MainActivity)activity).setPhoneTransferId(id); }
+    @JavascriptInterface public void finishPhoneTransfer(String id){ ((MainActivity)activity).finishPhoneTransfer(id); }
+    @JavascriptInterface public boolean consumePhoneTransferCompletion(){ return ((MainActivity)activity).consumePhoneTransferCompletion(); }
+    @JavascriptInterface public void returnToHouseholdServer(){ ((MainActivity)activity).returnToHouseholdServer(); }
     @JavascriptInterface public String getServerUrl() { return ((MainActivity)activity).serverUrl(); }
     @JavascriptInterface public void testServer(String url,String requestId) { ((MainActivity)activity).testServer(url,requestId,false); }
     @JavascriptInterface public void connectServer(String url,String requestId) { ((MainActivity)activity).testServer(url,requestId,true); }

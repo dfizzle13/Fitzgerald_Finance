@@ -44,10 +44,10 @@ def handle(handler,method,path,con,error):
         if challenges[key]['expires']<now:challenges.pop(key,None)
     def actor():return handler.session(con,True)
     def password_check(user):
-        from main import password_hash
+        from main import verify_password
         saved=con.execute('SELECT * FROM accounts WHERE id=?',(user['id'],)).fetchone()
         password=body.get('password','')
-        if not isinstance(password,str) or len(password)>256 or not hmac.compare_digest(password_hash(password,saved['salt']),saved['password_hash']):raise error(403,'Confirm your current password to enable this device.')
+        if not isinstance(password,str) or len(password)>256 or not verify_password(con,saved,password):raise error(403,'Confirm your current password to enable this device.')
     def fido(origin_value,rp):
         if not WEBAUTHN:raise error(503,'Install the server WebAuthn dependencies to enable browser biometrics.')
         return Fido2Server({'id':rp,'name':'Fitzgerald Finance'},verify_origin=lambda value:value==origin_value)

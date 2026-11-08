@@ -5,6 +5,7 @@ import ipaddress
 import math
 import socket
 import device_auth
+import account_admin
 import argparse
 import hashlib
 import hmac
@@ -30,6 +31,16 @@ class APIError(Exception):
 
 def password_hash(password, salt):
     return hashlib.scrypt(password.encode(), salt=bytes.fromhex(salt), n=16384, r=8, p=1).hex()
+
+def verify_password(con, account, password):
+    legacy = con.execute('SELECT salt FROM legacy_account_auth WHERE account_id=?', (account['id'],)).fetchone() if account else None
+    candidate = hashlib.sha256((legacy['salt'] + ':' + password).encode()).hexdigest() if legacy else password
+    valid = hmac.compare_digest(password_hash(candidate, account['salt'] if account else '00' * 16), account['password_hash'] if account else '00' * 64)
+    if valid and legacy:
+        salt = secrets.token_hex(16)
+        con.execute('UPDATE accounts SET salt=?,password_hash=? WHERE id=?', (salt, password_hash(password, salt), account['id']))
+        con.execute('DELETE FROM legacy_account_auth WHERE account_id=?', (account['id'],))
+    return bool(account and valid)
 
 def validate_data(data):
     if not isinstance(data, dict):
@@ -88,6 +99,8 @@ class FinanceHTTPServer(ThreadingHTTPServer):
                 id TEXT PRIMARY KEY, username TEXT UNIQUE COLLATE NOCASE,
                 salt TEXT NOT NULL, password_hash TEXT NOT NULL,
                 role TEXT NOT NULL CHECK(role IN ('admin','user')), created_at INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS device_transfers (id TEXT PRIMARY KEY,digest TEXT NOT NULL,result TEXT NOT NULL,actor TEXT NOT NULL,created_at INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS legacy_account_auth (account_id TEXT PRIMARY KEY, salt TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS sessions (
                 token_hash TEXT PRIMARY KEY, account_id TEXT NOT NULL,
                 csrf TEXT NOT NULL, expires INTEGER NOT NULL);
@@ -265,9 +278,7 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(name, str) or not isinstance(password, str) or len(password) > 256:
                 raise APIError(400, 'Invalid credentials.')
             row = con.execute('SELECT * FROM accounts WHERE username=?', (name,)).fetchone()
-            salt = row['salt'] if row else '00' * 16
-            candidate = password_hash(password, salt)
-            if not row or not hmac.compare_digest(candidate, row['password_hash']):
+            if not verify_password(con, row, password):
                 self.server.attempts[self.client_address[0]] = attempts + [now]
                 raise APIError(401, 'Username or password is incorrect.')
             self.server.attempts.pop(self.client_address[0], None)
@@ -281,6 +292,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(200, {'user': self.account(actor), 'csrf': actor['csrf'], **self.state(con)})
         if method == 'GET' and path == '/api/state':
             return self.send_json(200, self.state(con))
+        if method == 'POST' and path == '/api/backup':
+            self.body()
+            self.server.backup()
+            return self.send_json(200, {'ok': True})
         if method == 'POST' and path == '/api/logout':
             con.execute('DELETE FROM sessions WHERE token_hash=?', (actor['token_hash'],))
             con.commit()
@@ -301,17 +316,20 @@ class Handler(BaseHTTPRequestHandler):
             body = self.body()
             row = con.execute('SELECT * FROM accounts WHERE id=?', (actor['id'],)).fetchone()
             current = body.get('current', '')
-            if not isinstance(current, str) or len(current) > 256 or not hmac.compare_digest(password_hash(current, row['salt']), row['password_hash']):
+            if not isinstance(current, str) or len(current) > 256 or not verify_password(con, row, current):
                 raise APIError(403, 'Current password is incorrect.')
             _, password = self.credentials({'username': actor['username'], 'password': body.get('password')})
             salt = secrets.token_hex(16)
             con.execute('UPDATE accounts SET salt=?,password_hash=? WHERE id=?', (salt, password_hash(password, salt), actor['id']))
             con.execute('DELETE FROM sessions WHERE account_id=? AND token_hash<>?', (actor['id'], actor['token_hash']))
             con.execute('DELETE FROM device_credentials WHERE account_id=?', (actor['id'],))
+            con.execute('DELETE FROM legacy_account_auth WHERE account_id=?', (actor['id'],))
             con.commit()
             return self.send_json(200, {'ok': True})
         if actor['role'] != 'admin':
             raise APIError(403, 'Administrator access required.')
+        if account_admin.handle(self, method, path, con, actor, APIError):
+            return
         if method == 'GET' and path == '/api/users':
             return self.send_json(200, {'users': [self.account(row) for row in con.execute('SELECT * FROM accounts ORDER BY created_at,username')]})
         if method == 'POST' and path == '/api/users':
@@ -330,7 +348,7 @@ class Handler(BaseHTTPRequestHandler):
         raise APIError(404, 'Not found.')
     def static(self, path):
         allowed = {'/': ('index.html', 'text/html'), '/index.html': ('index.html', 'text/html'),
-            '/shared-client.js': ('shared-client.js', 'text/javascript'), '/device-client.js': ('device-client.js', 'text/javascript'), '/connection-client.js': ('connection-client.js', 'text/javascript'), '/sw.js': ('sw.js', 'text/javascript'),
+            '/account-client.js': ('account-client.js', 'text/javascript'), '/shared-client.js': ('shared-client.js', 'text/javascript'), '/device-client.js': ('device-client.js', 'text/javascript'), '/connection-client.js': ('connection-client.js', 'text/javascript'), '/sw.js': ('sw.js', 'text/javascript'),
             '/manifest.webmanifest': ('manifest.webmanifest', 'application/manifest+json'), '/icon.svg': ('icon.svg', 'image/svg+xml')}
         if path not in allowed:
             raise APIError(404, 'Not found.')

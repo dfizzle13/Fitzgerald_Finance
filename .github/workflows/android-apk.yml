@@ -9,6 +9,7 @@ on:
       - "shared-client.js"
       - "connection-client.js"
       - "device-client.js"
+      - "account-client.js"
       - "app/**"
       - "build.gradle"
       - "settings.gradle"

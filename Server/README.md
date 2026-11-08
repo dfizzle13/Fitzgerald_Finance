@@ -9,7 +9,7 @@ The PC hosts SQLite and shared accounts. Phones use the HTTPS server; the databa
 3. First-time households choose **Set up household** and their own administrator username/password (12+ characters). Existing households keep their logins/data. There is no shared default password.
 4. Use **Account administration -> Add household member** for a spouse. Both accounts share the same financial records.
 
-The database is `Database/finance.sqlite3`, excluded from Git. Financial JSON import replaces household records after confirmation but preserves shared accounts/passwords. Independent device edits merge; conflicting changes remain recoverable on the second device with download/reload controls. Failed saves never silently overwrite another device's changes. Unsaved edits remain in browser storage until resolved.
+The database is `Database/finance.sqlite3`, excluded from Git. Financial JSON import replaces household records after confirmation but preserves shared accounts/passwords. Independent device edits merge; conflicting changes remain recoverable on the second device with download/reload controls. Failed saves never silently overwrite another device's changes. Unsaved edits remain only in memory in the open app window; reconnect and retry before closing. No financial drafts are written to device storage.
 
 ## Shared ngrok access
 
@@ -25,13 +25,13 @@ Sign in with a password, then enable biometrics in Settings and confirm that pas
 
 Browser sign-in uses verified WebAuthn challenges: private keys stay with the platform authenticator, while the server stores public credential information. Browsers may offer device PIN verification. The updated Android source encrypts a random sign-in credential with an authentication-per-use Android Keystore key; only encrypted data remains in device preferences, and Android backup is disabled. The server retains a hash, expiring after 90 days. Password changes revoke device credentials. Password sign-in remains available.
 
-Existing installed APKs need a future rebuild for the native connection settings and encrypted vault. No APK is produced for this update. Hosted HTTPS browsers can use WebAuthn now.
+Install the current signed APK for native connection, device transfers, and encrypted biometric sign-in. Hosted HTTPS browsers can use WebAuthn.
 
 ## Startup, backups, recovery
 
 `Server/Enable-Startup.ps1` starts Finance when Windows signs in; `Server/Stop-Server.ps1` stops only its recorded process. The central panel starts missing enabled services and leaves healthy existing processes alone. Closing the panel leaves services running.
 
-SQLite backup snapshots are saved at startup and before writes, retaining the latest 14 backup days under `Database/backups`. These contain credentials/session data and must stay private. Also download financial JSON backups from Settings to another drive. To restore SQLite: stop Finance, preserve the current database plus WAL/SHM files in a recovery folder, copy the selected snapshot to `Database/finance.sqlite3`, then restart. JSON restore preserves shared logins.
+SQLite backup snapshots are saved at startup and before writes, retaining the latest 14 backup days under `Database/backups`. These contain credentials/session data and must stay private. Use Settings -> Create server backup to create a private snapshot on the hosting PC. To restore SQLite: stop Finance, preserve the current database plus WAL/SHM files in a recovery folder, copy the selected snapshot to `Database/finance.sqlite3`, then restart. JSON restore preserves shared logins.
 
 ## Verification
 
@@ -42,4 +42,10 @@ node tests/shared-client.test.cjs
 node tests/bills.test.cjs
 ```
 
-The static index remains a standalone local edition; shared mode activates only through Server/main.py. Private API responses are never cached. The legacy local-edition account notes in the root README do not describe shared-server authentication.
+Static and file-based copies display a server connection/transfer screen. Financial records are loaded only from Server/main.py and never persisted by the client. Private API responses are never cached.
+
+## Server administration and legacy devices
+
+Administrators use Account administration from any connected device to add members, manage roles, reset passwords, and import old device data. Resetting a password revokes other sessions and biometric credentials. Settings includes Sign out. All members use one household budget; accounts never select a device-local budget.
+
+The Android transfer flow is documented in the root README. It requires the current server administrator password, preserves existing usernames/financial records, wraps older password verifiers with scrypt, and archives transferred financial snapshots privately on the server. A matching successful receipt is required before Android clears the old file-origin financial/account storage. Import on the source phone to complete that cleanup automatically.

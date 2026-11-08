@@ -35,7 +35,7 @@ class FinanceServer {
  }
  accept(result){this.user=result.user;this.csrf=result.csrf;this.base=copy(result.data);this.revision=result.revision;this.desired=null;this.blocked=false;this.hooks.status('Saved to household server');return Object.assign({},result.user,{data:copy(result.data)});}
  draftKey(){return 'fitzgeraldFinance.sharedDraft.'+(this.user?this.user.id:'pending')}
- stage(data){if(!this.user)return;if(this.base&&equal(data,this.base)&&!this.desired&&!this.blocked)return;this.desired=copy(data);try{localStorage.setItem(this.draftKey(),JSON.stringify(this.desired))}catch{};this.hooks.status(this.blocked?'Changes waiting — resolve the save issue below':'Saving…',this.blocked);if(!this.saving&&!this.blocked)this.flush();}
+ stage(data){if(!this.user)return;if(this.base&&equal(data,this.base)&&!this.desired&&!this.blocked)return;this.desired=copy(data);this.hooks.status(this.blocked?'Changes waiting — resolve the save issue below':'Saving…',this.blocked);if(!this.saving&&!this.blocked)this.flush();}
  async flush(){
   if(this.saving||this.blocked||!this.desired)return;
   this.saving=true;
@@ -57,8 +57,8 @@ class FinanceServer {
      this.desired=this.desired||local;throw error;
     }
    }
-   localStorage.removeItem(this.draftKey());this.hooks.status('Saved to household server');
-  }catch(error){this.blocked=true;this.hooks.status(error.message||'Connection lost. Changes are waiting to save.',true);}
+   this.hooks.status('Saved to household server');
+  }catch(error){this.blocked=true;this.hooks.status((error.message||'Connection lost.')+' Unsaved changes remain only in this open window. Reconnect and retry before closing.',true);}
   finally{this.saving=false;}
  }
  async poll(){

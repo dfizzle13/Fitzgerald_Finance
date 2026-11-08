@@ -15,6 +15,7 @@ async function browser(file){
  run("$('#username').value='householdAdmin';$('#password').value='test-household-password'");await run('sharedLogin()');
  assert.equal(run('user.username'),'householdAdmin');assert.equal(run('user.salt'),undefined);
  assert.equal(storage.has('fitzgeraldFinance.v1'),false);
+ assert.equal([...storage.keys()].some(k=>k.startsWith('fitzgeraldFinance.sharedDraft.')),false);
  return {run,nodes,context};
 }
 async function idle(app){for(let i=0;i<200&&app.run('sharedClient.saving');i++)await new Promise(r=>setTimeout(r,10));assert.equal(app.run('sharedClient.blocked'),false);assert.equal(app.run('sharedClient.saving'),false);}

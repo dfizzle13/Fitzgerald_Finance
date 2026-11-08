@@ -50,6 +50,25 @@ public final class MainActivity extends FragmentActivity {
         webView.setWebChromeClient(new WebChromeClient());webView.addJavascriptInterface(new FinanceBiometricBridge(this,webView),"FitzgeraldAndroid");setContentView(webView);
         String server=serverUrl();if(server.isEmpty())webView.loadUrl(LOCAL);else loadServer(server);
     }
+    public void openPhoneAccounts(){
+        if(!trustedPage())return;
+        runOnUiThread(()->webView.loadUrl(LOCAL+"#device-transfer"));
+    }
+    public void setPhoneTransferId(String identifier){
+        if(currentPage.startsWith(LOCAL)&&identifier!=null&&identifier.matches("[a-f0-9]{32}"))connections.edit().putString("pendingTransfer",identifier).apply();
+    }
+    public void finishPhoneTransfer(String identifier){
+        if(!trustedScope(serverUrl()+"|transfer")||identifier==null||!identifier.equals(connections.getString("pendingTransfer","")))return;
+        connections.edit().putBoolean("completeTransfer",true).apply();
+        runOnUiThread(()->webView.loadUrl(LOCAL+"#complete-transfer"));
+    }
+    public boolean consumePhoneTransferCompletion(){
+        if(!currentPage.startsWith(LOCAL)||!connections.getBoolean("completeTransfer",false))return false;
+        connections.edit().remove("completeTransfer").remove("pendingTransfer").apply();return true;
+    }
+    public void returnToHouseholdServer(){
+        if(currentPage.startsWith(LOCAL)&&!serverUrl().isEmpty())runOnUiThread(()->loadServer(serverUrl()));
+    }
     public String serverUrl(){return connections.getString("url","");}
     private boolean allowed(String url){
         if(url.startsWith("file:///android_asset/www/"))return true;

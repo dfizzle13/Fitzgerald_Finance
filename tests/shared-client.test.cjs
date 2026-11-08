@@ -8,7 +8,7 @@ assert.throws(()=>merge(base,{...base,transactions:[{id:'one',amount:11}]},{...b
 assert.deepEqual(merge(base,{...base,bills:[{id:'bill',paid:{'2026-11-01':true}}]},{...base,bills:[{id:'bill',paid:{'2026-12-01':true}}]}).bills[0].paid,{'2026-11-01':true,'2026-12-01':true});
 assert.deepEqual(merge(base,{...base,transactions:[]},base).transactions,[]);
 assert.throws(()=>merge(base,{...base,transactions:[]},{...base,transactions:[{id:'one',amount:12}]}),/same item/);
-global.localStorage={setItem(){},removeItem(){}};
+global.localStorage={setItem(){throw Error('Financial writes to local storage are forbidden')},removeItem(){throw Error('Transport must not use financial local storage')}};
 (async()=>{
  let server=clone(base),revision=1,states=[],messages=[];
  global.fetch=async(url,options)=>{
