@@ -262,7 +262,6 @@ body:has(.dlgback){overflow:hidden;overscroll-behavior:none}
 .overdue-bill-section{margin-bottom:14px}
 #overdueBillList{display:grid;gap:12px}
 #overviewOverdueBills{border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:8px}
-#overviewOverdueBills h3{margin:0 0 4px;font-size:13px;color:var(--red)}
 .bill-overdue-text{color:var(--red);display:block}
 .calendar-day .calbill.overdue{background:#ffebe9;color:#96332e}
 </style></head><body><div id="root">
@@ -501,7 +500,7 @@ function upcomingBillItems(at){
 function renderWeekBills(){
  var now=new Date(),overdue=overdueBillItems(now),warning=$('#overviewOverdueBills');
  warning.classList.toggle('hide',!overdue.length);
- warning.innerHTML=overdue.length?'<h3>Overdue bills</h3>'+overdue.map(function(x){
+ warning.innerHTML=overdue.length?overdue.map(function(x){
   var date=dateOf(x.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   return '<div class="activityrow"><div class="activityicon" aria-hidden="true">!</div><div class="activityinfo"><strong>'+esc(x.b.name)+'</strong><small>Due '+date+'</small></div><div class="amt">'+cash(x.amount)+'<small class="bill-overdue-text">Overdue</small></div></div>';
  }).join(''):'';
