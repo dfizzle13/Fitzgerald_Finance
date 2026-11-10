@@ -235,6 +235,19 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.ok(!nodes['#weekBills'].innerHTML.includes('Due day 12'));
  run("D().bills=[{id:'dec',name:'December',day:31,frequency:'monthly',active:true},{id:'jan',name:'January',day:4,month:1,frequency:'yearly',active:true},{id:'late',name:'Too late',day:5,month:1,frequency:'yearly',active:true}]");
  assert.equal(run('upcomingBillItems(new Date(2026,11,28,12)).map(function(x){return x.date}).join(",")'),'2026-12-31,2027-01-04');
+ // Overdue occurrences stay visible across months and clear individually when paid.
+ run("D().bills=[{id:'overdue',name:'Past utility',day:2,startDate:'2026-10-02',monthlyAmounts:{'2026-10':40,'2026-11':25}},{id:'paid',name:'Paid utility',day:2,startDate:'2026-11-02',paid:{'2026-11-02':true}},{id:'today',name:'Due today',day:4,startDate:'2026-11-04'},{id:'future',name:'Future utility',day:2,startDate:'2026-12-02'},{id:'inactive',name:'Inactive utility',day:2,startDate:'2026-11-02',active:false},{id:'legacy',name:'Legacy utility',day:1}];billMonth=new Date(2026,11,1,12);renderWeekBills();renderCalendar()");
+ assert.equal(run("overdueBillItems().map(function(x){return x.b.id+':'+x.date}).join(',')"),'overdue:2026-10-02,legacy:2026-11-01,overdue:2026-11-02');
+ assert.ok(nodes['#overviewOverdueBills'].innerHTML.includes('Past utility'));
+ assert.ok(!nodes['#weekBills'].innerHTML.includes('Past utility'));
+ assert.ok(nodes['#overdueBillList'].innerHTML.includes('data-pay-bill="overdue" data-date="2026-10-02"'));
+ run("billMonth=new Date(2026,10,1,12);renderCalendar();openBillDay('2026-11-02')");
+ assert.ok(nodes['#billCalendar'].innerHTML.includes('1 overdue'));
+ assert.ok(nodes['#modal'].innerHTML.includes('>Overdue</span>'));
+ run("var savedExpenses=D().transactions.slice();markBillPaid('overdue','2026-10-02');renderWeekBills();renderCalendar()");
+ assert.ok(!nodes['#overdueBillList'].innerHTML.includes('data-pay-bill="overdue" data-date="2026-10-02"'));
+ assert.ok(nodes['#overdueBillList'].innerHTML.includes('data-pay-bill="overdue" data-date="2026-11-02"'));
+ run('D().transactions=savedExpenses;closeModal()');
  run('D().bills=[];renderWeekBills()');
  assert.ok(nodes['#weekBills'].innerHTML.includes('No bills due in the next 7 days.'));
 
