@@ -156,6 +156,15 @@ class HouseholdServerTests(unittest.TestCase):
         invalid_budget = dict(budget_purchase, fundsTransfer=dict(budget_purchase['fundsTransfer'], source='covered'))
         self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 4, 'data': dict(DATA, budgets=[annual], transactions=[invalid_budget])})[0], 400)
 
+    def test_weekly_budget_creation_is_removed_and_history_remains_readable(self):
+        weekly = {'id': 'legacy', 'cadence': 'weekly', 'amount': 100}
+        self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 1, 'data': dict(DATA, budgets=[weekly])})[0], 400)
+        monthly = dict(weekly, cadence='monthly', amount=500, history=[
+            {'from': '2026-01-01', 'cadence': 'weekly', 'amount': 100},
+            {'from': '2026-11-01', 'cadence': 'monthly', 'amount': 500}])
+        self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 1, 'data': dict(DATA, budgets=[monthly])})[0], 200)
+        self.assertEqual(self.admin.call('/api/state')[1]['data']['budgets'][0]['history'], monthly['history'])
+
     def test_data_validation_and_password_hashing(self):
         self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 1, 'data': {'budgets': 'wrong'}})[0], 400)
         self.assertEqual(self.admin.call('/api/users', 'POST', {'username': 'spouse', 'password': 'short'})[0], 400)

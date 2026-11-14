@@ -85,7 +85,7 @@ def validate_data(data):
             if key == 'bills' and row.get('startDate') is not None and not valid_date(row['startDate']):
                 raise APIError(400, 'Use a valid bill start date.')
             if key == 'budgets':
-                if row.get('cadence') not in ('weekly', 'monthly', 'annual'):
+                if row.get('cadence') not in ('monthly', 'annual'):
                     raise APIError(400, 'Invalid budget cadence.')
                 if row.get('recurrence', 'recurring') not in ('recurring', 'one-time') or (row.get('recurrence') == 'one-time' and not valid_date(row.get('budgetDate'))):
                     raise APIError(400, 'Choose recurring or a one-time budget with a valid date.')

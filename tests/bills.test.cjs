@@ -202,29 +202,36 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
 
  // Summary remaining cards use their own current horizons, and coverage is always YTD.
  run("user.data=seed();D().activeBudgetMonth='2026-10';D().budgets=[{id:'w',name:'Weekly',cadence:'weekly',amount:100,history:[{from:'2026-01-01',cadence:'weekly',amount:100}]},{id:'m',name:'Monthly',cadence:'monthly',amount:200,history:[{from:'2026-01-01',cadence:'monthly',amount:200}]}];D().bills=[{id:'due',name:'Due bill',category:'Electricity',frequency:'monthly',day:6,monthlyAmounts:{'2026-11':100},active:true}];syncBillBudgets();D().transactions=[{id:'priorYear',date:'2025-12-31',amount:20},{id:'priorWeek',date:'2026-01-03',amount:30},{id:'current',budgetId:'w',date:'2026-11-02',amount:60},{id:'future',date:'2026-11-05',amount:1000}];period='week';renderOverview()");
- assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Weekly Spend Remaining</label><strong>$40.00</strong>'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Yearly Spend Remaining</label>'));
+ assert.ok(!nodes['#overviewStats'].innerHTML.includes('Weekly Spend Remaining'));
  assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Monthly Spend Remaining</label><strong>$740.00</strong>'));
  assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Slush Coverage</label><strong>$30.00</strong>'));
  const summaryCards=nodes['#overviewStats'].innerHTML;
  run("period='year';renderOverview()");
  assert.equal(nodes['#overviewStats'].innerHTML,summaryCards);
  run("D().transactions.push({id:'overspend',budgetId:'w',date:'2026-11-03',amount:1000});renderOverview()");
- assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Weekly Spend Remaining</label><strong>$0.00</strong>'));
  assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Monthly Spend Remaining</label><strong>$700.00</strong>'));
- assert.ok(nodes['#overviewStats'].innerHTML.includes('Over plan by $960.00'));
  assert.ok(!nodes['#overviewStats'].innerHTML.includes('Over plan by $260.00'));
 
- // Weekly Summary uses only weekly-labelled non-calendar lines and their own spending.
+ // Summary uses monthly and yearly YTD allocations, with per-line caps and no slush deduction.
  setClock(2026,11,4);
- run("user.data=seed();D().activeBudgetMonth='2026-11';D().budgets=[{id:'sw',name:'Weekly groceries',cadence:'weekly',amount:100,history:[{from:'2026-01-01',cadence:'weekly',amount:100}]},{id:'swOnce',name:'Weekly one time',cadence:'weekly',recurrence:'one-time',budgetDate:'2026-11-04',amount:40,history:[{from:'2026-11-01',cadence:'weekly',recurrence:'one-time',budgetDate:'2026-11-04',amount:40}]},{id:'sm',name:'Monthly gas',cadence:'monthly',amount:300},{id:'smOnce',name:'Monthly one time',cadence:'monthly',recurrence:'one-time',budgetDate:'2026-11-04',amount:80,history:[{from:'2026-11-01',cadence:'monthly',recurrence:'one-time',budgetDate:'2026-11-04',amount:80}]},{id:'sa',name:'Annual item',cadence:'annual',amount:600},{id:'inactive',name:'Inactive weekly',cadence:'weekly',amount:1000,active:false}];D().bills=[{id:'utility',name:'Utility calendar',category:'Electricity',frequency:'monthly',day:6,monthlyAmounts:{'2026-11':120}}];syncBillBudgets();var utilityLine=budgets().find(function(b){return b.billId==='utility'});D().transactions=[{id:'sw-tx',budgetId:'sw',date:'2026-11-03',amount:25},{id:'sw-once-tx',budgetId:'swOnce',date:'2026-11-04',amount:15},{id:'sm-tx',budgetId:'sm',date:'2026-11-04',amount:50},{id:'annual-tx',budgetId:'sa',date:'2026-11-04',amount:70},{id:'bill-tx',budgetId:utilityLine.id,billId:'utility',date:'2026-11-04',amount:120},{id:'unlinked-bill',billId:'utility',date:'2026-11-04',amount:5},{id:'mislinked-bill',budgetId:'sw',billId:'utility',date:'2026-11-04',amount:7},{id:'unassigned',date:'2026-11-04',amount:999},{id:'inactive-tx',budgetId:'inactive',date:'2026-11-04',amount:20},{id:'previous-week',budgetId:'sw',date:'2026-10-31',amount:30},{id:'future-tx',budgetId:'sw',date:'2026-11-05',amount:500}];period='week';renderOverview()");
- assert.equal(run('weeklySummaryTotals().plan'),140);assert.equal(run('weeklySummaryTotals().spending'),40);
- assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Weekly Spend Remaining</label><strong>$100.00</strong>'));
- run("D().transactions.push({id:'another-monthly-payment',budgetId:utilityLine.id,billId:'utility',date:'2026-11-04',amount:1000});utilityLine.cadence='weekly';renderOverview()");
- assert.equal(run('weeklySummaryTotals().plan'),140);assert.equal(run('weeklySummaryTotals().spending'),40);
- run("utilityLine.cadence='monthly';period='month';renderOverview()");
- assert.ok(nodes['#pulse'].innerHTML.includes('Monthly gas'));assert.ok(nodes['#pulse'].innerHTML.includes('Monthly one time'));assert.ok(!nodes['#pulse'].innerHTML.includes('Utility calendar'));
- assert.ok(nodes['#weekBills'].innerHTML.includes('Utility calendar'));
- run("bp='week';$('#budgetSearch').value='';$('#budgetCadence').value='all';$('#budgetStatus').value='all';renderBudgets()");assert.ok(nodes['#budgetRows'].innerHTML.includes('Utility calendar'));
+ run("user.data=seed();D().activeBudgetMonth='2026-11';D().budgets=[{id:'monthly',name:'Monthly gas',category:'Fuel',cadence:'monthly',amount:500,history:[{from:'2026-01-01',cadence:'monthly',amount:200},{from:'2026-11-01',cadence:'monthly',amount:300},{from:'2026-12-01',cadence:'monthly',amount:500}]},{id:'reserve',name:'Monthly reserve',cadence:'monthly',recurrence:'one-time',budgetDate:'2026-11-04',amount:200,history:[{from:'2026-11-01',cadence:'monthly',recurrence:'one-time',budgetDate:'2026-11-04',amount:200}]},{id:'annual',name:'Annual repair',category:'Car repair',cadence:'annual',amount:1200,history:[{from:'2026-01-01',cadence:'annual',amount:1200}]}];D().bills=[{id:'utility',name:'Calendar utility',category:'Electricity',frequency:'monthly',day:6,monthlyAmounts:{'2026-11':80}}];syncBillBudgets();var utilityLine=budgets().find(function(b){return b.billId==='utility'});D().transactions=[{id:'jan',budgetId:'monthly',date:'2026-01-02',amount:100},{id:'month1',budgetId:'monthly',date:'2026-11-02',amount:150},{id:'month2',budgetId:'monthly',date:'2026-11-03',amount:200},{id:'annual-spend',budgetId:'annual',date:'2026-11-02',amount:50},{id:'bill',budgetId:utilityLine.id,billId:'utility',date:'2026-11-04',amount:80},{id:'unbudgeted',date:'2026-11-04',amount:500},{id:'future',budgetId:'annual',date:'2026-11-05',amount:999}];period='month';renderOverview()");
+ assert.equal(run('monthlySummaryTotals().plan'),580);
+ assert.equal(run('monthlySummaryTotals().spending'),380);
+ assert.equal(run('yearlySummaryTotals().plan'),3780);
+ assert.equal(run('yearlySummaryTotals().spending'),530);
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Monthly Spend Remaining</label><strong>$200.00</strong>'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Yearly Spend Remaining</label><strong>$3,250.00</strong>'));
+ assert.ok(nodes['#pulse'].innerHTML.includes('Monthly gas'));
+ assert.ok(!nodes['#pulse'].innerHTML.includes('Calendar utility'));
+ assert.ok(!html.includes('data-period="week"'));
+ assert.ok(!html.includes('<option value="weekly"'));
+ assert.equal(run("seed().budgets.some(function(line){return line.cadence==='weekly'})"),false);
+ assert.equal(run("seed().budgets.some(function(line){return line.history.some(function(h){return h.cadence==='weekly'})})"),false);
+ run("period='year';renderOverview()");assert.ok(nodes['#pulse'].innerHTML.includes('Annual repair'));assert.ok(!nodes['#pulse'].innerHTML.includes('Monthly gas'));
+ run("D().transactions.push({id:'annual-over',budgetId:'annual',date:'2026-11-04',amount:1300})");
+ assert.equal(run('yearlySummaryTotals().spending'),1680);
+ assert.equal(run('yearlySummaryTotals().plan-yearlySummaryTotals().spending'),2100);
  // Coming up includes tomorrow through day seven, never today, past dates or day eight.
  run("D().bills=[3,4,5,11,12].map(function(day){return {id:'day'+day,name:'Due day '+day,day:day,frequency:'monthly',active:true,monthlyAmounts:{'2026-11':10}}});renderWeekBills()");
  assert.equal(run('upcomingBillItems().map(function(x){return x.date}).join(",")'),'2026-11-05,2026-11-11');
@@ -254,7 +261,7 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  // Focus toggle strictly matches the native cadence and never rolls up calendar bills.
  run("D().budgets=[{id:'fw',name:'Weekly only',cadence:'weekly',amount:100,history:[{from:'2026-01-01',cadence:'weekly',amount:100}]},{id:'fm',name:'Monthly only',cadence:'monthly',amount:200,history:[{from:'2026-01-01',cadence:'monthly',amount:200}]},{id:'fa',name:'Annual only',cadence:'annual',amount:300,history:[{from:'2026-01-01',cadence:'annual',amount:300}]}];D().bills=[{id:'fc',name:'Calendar monthly',category:'Electricity',frequency:'monthly',day:6,monthlyAmounts:{'2026-01':80,'2026-11':120},active:true}];D().transactions=[];syncBillBudgets()");
  const labels={week:'Weekly only',month:'Monthly only',year:'Annual only'};
- for(const selected of ['week','month','year']){
+ for(const selected of ['month','year']){
   run(`$('#focusPeriods').onclick({target:{closest(){return {dataset:{period:'${selected}'}}}}})`);
   assert.equal(nodes['#overviewHeading'].textContent,'Your '+selected+', in focus');
   for(const [key,label] of Object.entries(labels))assert.equal(nodes['#pulse'].innerHTML.includes(label),key===selected);
@@ -369,7 +376,7 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  run("editBill('monthend','2027-02-28');$('#billDate').value='2027-02-27';$('#billDate').oninput();$('#modal form').onsubmit({preventDefault(){}})");
  assert.equal(run('bills()[0].day'),27);
  // Summary sorts actual usage ascending for each cadence, with unfunded spending last.
- for(const [cadence,focus] of [['weekly','week'],['monthly','month'],['annual','year']]){
+ for(const [cadence,focus] of [['monthly','month'],['annual','year']]){
   context.testCadence=cadence;context.testFocus=focus;
   run("user.data=seed();D().activeBudgetMonth='2026-11';D().bills=[];D().budgets=[['low','Low usage',100],['high','High usage',100],['zero','Unused',0],['over','Over budget',100],['unfunded','Unfunded spending',0]].map(function(v){return {id:v[0],name:v[1],amount:v[2],cadence:testCadence,history:[{from:'2026-01-01',cadence:testCadence,amount:v[2]}]}});D().transactions=[{id:'a',budgetId:'low',date:'2026-11-08',amount:10},{id:'b',budgetId:'high',date:'2026-11-08',amount:80},{id:'c',budgetId:'over',date:'2026-11-08',amount:150},{id:'d',budgetId:'unfunded',date:'2026-11-08',amount:5}];period=testFocus;renderOverview()");
   const pulse=nodes['#pulse'].innerHTML,names=['Unused','Low usage','High usage','Over budget','Unfunded spending'];
