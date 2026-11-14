@@ -77,7 +77,10 @@ def validate_data(data):
                         or type(transfer.get('amount')) not in (int, float)
                         or transfer['amount'] != row.get('amount')
                         or transfer.get('budgetId') != row.get('budgetId')
-                        or transfer.get('purchaseDate') != row.get('date')):
+                        or transfer.get('purchaseDate') != row.get('date')
+                        or ('source' in transfer and transfer['source'] not in ('budget', 'covered', 'slush'))
+                        or (transfer.get('source') == 'budget' and not row.get('budgetId'))
+                        or (transfer.get('source') in ('covered', 'slush') and bool(row.get('budgetId')))):
                     raise APIError(400, 'Transfer confirmation must match the purchase and use a valid transfer date.')
             if key == 'bills' and row.get('startDate') is not None and not valid_date(row['startDate']):
                 raise APIError(400, 'Use a valid bill start date.')

@@ -377,7 +377,7 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
   assert.ok(pulse.includes('150% used'));assert.ok(pulse.includes('0% used'));
  }
 
- // Non-monthly funding stays in slush until confirmed, without consuming regular budget capacity.
+ // Budgeted annual spending uses slush only above its allocation, regardless of transfer status.
  setClock(2026,11,14);
  run("user.data=seed();D().budgets=[{id:'gas',name:'Gas',category:'Fuel',cadence:'monthly',amount:200},{id:'food',name:'Food',category:'Groceries',cadence:'monthly',amount:300},{id:'repair',name:'Car repair',category:'Car repair',cadence:'annual',amount:1200},{id:'weekly',name:'Weekly',cadence:'weekly',amount:100}];D().bills=[];D().transactions=[{id:'gas-spend',budgetId:'gas',title:'Gas',date:'2026-11-14',amount:250},{id:'food-spend',budgetId:'food',title:'Food',date:'2026-11-14',amount:50},{id:'repair-spend',budgetId:'repair',title:'Car repair purchase',category:'Car repair',date:'2026-11-14',amount:500},{id:'none',title:'Unassigned',date:'2026-11-14',budgetId:null,amount:75},{id:'weekly-spend',budgetId:'weekly',title:'Weekly',date:'2026-11-14',amount:10}];D().incomes=[{id:'pay',source:'Paycheck',date:'2026-10-15',amount:2000}];renderOverview();renderTransfers()");
  assert.ok(!html.includes('id="page-slush"'));
@@ -385,7 +385,7 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run('monthlySummaryTotals().plan'),1000);
  assert.equal(run('monthlySummaryTotals().spending'),260);
  assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Monthly Spend Remaining</label><strong>$740.00</strong>'));
- assert.equal(run("overSum('year')"),625);
+ assert.equal(run("overSum('year')"),125);
  assert.equal(run("needsFundsTransfer(expenses()[4])"),false);
  assert.ok(nodes['#pendingTransfers'].innerHTML.includes('Car repair purchase'));
  assert.ok(!nodes['#pendingTransfers'].innerHTML.includes('data-transfer-confirm="gas-spend"'));
@@ -405,14 +405,14 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.ok(nodes['#ledgerStats'].innerHTML.includes('<label>Real outflow</label><strong>$885.00</strong>'));
  run("expenses()[2].amount=600;renderTransfers()");
  assert.equal(run('transferActivity().length'),0);
- assert.equal(run("overSum('year')"),725);
+ assert.equal(run("overSum('year')"),125);
  run("confirmFundsTransfer('repair-spend');$('#transferDate').value='2026-11-14';$('#modal form').onsubmit({preventDefault(){}});$('#page-transfers').onclick({target:{closest(selector){return selector==='[data-transfer-undo]'?{dataset:{transferUndo:'repair-spend'}}:null}}})");
  assert.equal(run('transferActivity().length'),0);
- assert.equal(run("overSum('year')"),725);
+ assert.equal(run("overSum('year')"),125);
  run("confirmFundsTransfer('none');$('#transferDate').value='2026-11-15';$('#modal form').onsubmit({preventDefault(){}})");
  assert.ok(nodes['#dlgerror'].textContent.includes('valid transfer date'));
  assert.equal(run('transferActivity().length'),0);
- run('D().transactions=[];renderTransfers()');assert.ok(nodes['#pendingTransfers'].innerHTML.includes('All purchases needing transfers are covered'));
+ run('D().transactions=[];renderTransfers()');assert.ok(nodes['#pendingTransfers'].innerHTML.includes('All required transfers are confirmed'));
 
  // Pending-category totals and Ledger transfer reports reconcile with full history.
  run("D().transactions=Array.from({length:42},function(_,i){var t={id:'page-'+i,title:'Purchase '+i,date:i===0?'2025-12-31':'2026-11-14',amount:1,budgetId:'repair',category:i%2?'Miscellaneous':'Car repair'};if(i%4===0)t.fundsTransfer={amount:1,budgetId:'repair',purchaseDate:t.date,date:'2026-01-02'};return t});D().incomes=Array.from({length:31},function(_,i){return {id:'income-'+i,source:'Income '+i,date:'2026-11-14',amount:10}});renderTransfers();lp='year';$('#ledgerType').value='all';visibleRows.ledger=15;renderLedger()");
@@ -448,6 +448,47 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  run("D().transactions=[];D().incomes=[];renderTransfers();renderLedger();renderIncome();renderTransactions()");
  assert.ok(nodes['#transferPendingCategories'].innerHTML.includes('No transfers outstanding'));
  assert.equal(nodes['#incomeRowCount'].textContent,'Showing 0 of 0 entries');
+
+ // Funding source is separate from budget limits and required only without a category budget.
+ run("user.data=seed();D().categories=D().categories.filter(function(c){return !['Payback','Business expenses'].includes(c.name)});migrateCharitableGiving()");
+ assert.equal(run("groupOf('Payback')"),'Financial');
+ assert.equal(run("groupOf('Business expenses')"),'Work');
+ run('migrateCharitableGiving()');assert.equal(run("D().categories.filter(function(c){return c.name==='Business expenses'}).length"),1);
+ run("D().budgets=[{id:'annual',name:'Annual repairs',category:'Car repair',cadence:'annual',amount:1200},{id:'monthly',name:'Monthly fuel',category:'Fuel',cadence:'monthly',amount:200},{id:'weekly',name:'Weekly groceries',category:'Groceries',cadence:'weekly',amount:100}];D().transactions=[{id:'repair-a',title:'Repair A',category:'Car repair',budgetId:'annual',date:'2026-11-01',amount:500},{id:'repair-b',title:'Repair B',category:'Car repair',budgetId:'annual',date:'2026-11-02',amount:800},{id:'business',title:'Business seed money',category:'Business expenses',budgetId:null,date:'2026-11-03',amount:100},{id:'fuel',title:'Fuel',category:'Fuel',budgetId:'monthly',date:'2026-11-03',amount:250}];D().incomes=[];D().bills=[];renderTransfers()");
+ assert.equal(run('coverage()[0].over'),0);assert.equal(run('coverage()[1].over'),100);
+ assert.equal(run("overSum('year')"),250);
+ run("confirmFundsTransfer('repair-a')");assert.ok(!nodes['#modal'].innerHTML.includes('id="transferSource"'));
+ run("$('#transferDate').value='2026-11-14';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run("expenses()[0].fundsTransfer.source"),'budget');
+ run("confirmFundsTransfer('repair-b');$('#transferDate').value='2026-11-14';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run('coverage()[1].over'),100);assert.equal(run("overSum('year')"),250);
+ run("confirmFundsTransfer('business');$('#transferDate').value='2026-11-14';$('#transferSource').value='';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.ok(nodes['#dlgerror'].textContent.includes('Choose Covered account or Slush fund'));
+ assert.equal(run('expenses()[2].fundsTransfer'),undefined);
+ run("$('#transferSource').value='slush';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run("overSum('year')"),250);assert.equal(run('transferActivity().length'),3);
+ assert.equal(run("transferActivity().find(function(t){return t.purchaseId==='business'}).fundingSource"),'Slush fund');
+ run("confirmFundsTransfer('business');$('#transferSource').value='covered';$('#modal form').onsubmit({preventDefault(){}});renderTransfers()");
+ assert.equal(run("overSum('year')"),150);assert.equal(run('transferActivity().length'),3);
+ assert.ok(nodes['#confirmedTransfers'].innerHTML.includes('Covered account'));
+ run("confirmFundsTransfer('business');$('#transferSource').value='slush';$('#modal form').onsubmit({preventDefault(){}})");assert.equal(run("overSum('year')"),250);
+ // A legacy confirmation must be reviewed instead of assuming its funding source.
+ run("delete expenses()[2].fundsTransfer.source;renderTransfers()");
+ assert.equal(run('transferNeedsReview(expenses()[2])'),true);
+ assert.ok(nodes['#transferSourceReview'].textContent.includes('1 confirmed transfer needs funding details'));
+ assert.equal(run("overSum('year')"),250);
+ run("confirmFundsTransfer('business');$('#transferSource').value='covered';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run('transferNeedsReview(expenses()[2])'),false);assert.equal(run("overSum('year')"),150);
+ // A deliberately unassigned purchase in a budgeted category must be assigned before confirming.
+ run("D().transactions.push({id:'unassigned-fuel',title:'Unassigned fuel',category:'Fuel',budgetId:null,date:'2026-11-04',amount:10});confirmFundsTransfer('unassigned-fuel')");
+ assert.ok(nodes['#modal'].innerHTML.includes('id="transferBudget"'));
+ assert.ok(!nodes['#modal'].innerHTML.includes('id="transferSource"'));
+ run("$('#transferBudget').value='monthly';$('#transferDate').value='2026-11-14';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run('expenses()[4].budgetId'),'monthly');assert.equal(run('expenses()[4].fundsTransfer.source'),'budget');
+ assert.equal(run('coverage()[4].over'),10);
+ run("D().transactions.push({id:'orphan-budget',title:'Old business purchase',category:'Business expenses',budgetId:'deleted-line',date:'2026-11-04',amount:25});confirmFundsTransfer('orphan-budget');$('#transferSource').value='covered';$('#transferDate').value='2026-11-14';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run('expenses()[5].budgetId'),null);assert.equal(run('coverage()[5].over'),0);
+ for(const category of ['Car repair','Fuel','Groceries']){context.category=category;assert.equal(run('needsTransferSource({category:category,budgetId:null})'),false)}
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 

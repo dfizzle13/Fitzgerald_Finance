@@ -134,18 +134,27 @@ class HouseholdServerTests(unittest.TestCase):
         from datetime import date
         today = date.today().isoformat()
         purchase = {'id': 'repair', 'date': today, 'amount': 500, 'budgetId': None,
-                    'fundsTransfer': {'date': today, 'purchaseDate': today, 'amount': 500, 'budgetId': None}}
+                    'fundsTransfer': {'date': today, 'purchaseDate': today, 'amount': 500, 'budgetId': None, 'source': 'covered'}}
         data = dict(DATA, transactions=[purchase])
         self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 1, 'data': data})[0], 200)
         member = self.member()
         self.assertEqual(member.call('/api/state')[1]['data']['transactions'][0], purchase)
-        for transfer in ('invalid', dict(purchase['fundsTransfer'], date='bad'),
+        for transfer in ('invalid', dict(purchase['fundsTransfer'], source='unknown'),
+                         dict(purchase['fundsTransfer'], source='budget'), dict(purchase['fundsTransfer'], date='bad'),
                          dict(purchase['fundsTransfer'], amount=499),
                          dict(purchase['fundsTransfer'], budgetId='different'),
                          dict(purchase['fundsTransfer'], purchaseDate='2000-01-01')):
             invalid = dict(DATA, transactions=[dict(purchase, fundsTransfer=transfer)])
             self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 2, 'data': invalid})[0], 400)
         self.assertEqual(member.call('/api/state')[1]['data']['transactions'][0], purchase)
+        slush_purchase = dict(purchase, fundsTransfer=dict(purchase['fundsTransfer'], source='slush'))
+        self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 2, 'data': dict(DATA, transactions=[slush_purchase])})[0], 200)
+        self.assertEqual(member.call('/api/state')[1]['data']['transactions'][0]['fundsTransfer']['source'], 'slush')
+        budget_purchase = dict(purchase, budgetId='annual', fundsTransfer=dict(purchase['fundsTransfer'], budgetId='annual', source='budget'))
+        annual = {'id': 'annual', 'cadence': 'annual', 'amount': 1000}
+        self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 3, 'data': dict(DATA, budgets=[annual], transactions=[budget_purchase])})[0], 200)
+        invalid_budget = dict(budget_purchase, fundsTransfer=dict(budget_purchase['fundsTransfer'], source='covered'))
+        self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 4, 'data': dict(DATA, budgets=[annual], transactions=[invalid_budget])})[0], 400)
 
     def test_data_validation_and_password_hashing(self):
         self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 1, 'data': {'budgets': 'wrong'}})[0], 400)
