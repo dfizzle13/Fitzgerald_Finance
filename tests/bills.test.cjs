@@ -210,9 +210,9 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(nodes['#overviewStats'].innerHTML,summaryCards);
  run("D().transactions.push({id:'overspend',budgetId:'w',date:'2026-11-03',amount:1000});renderOverview()");
  assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Weekly Spend Remaining</label><strong>$0.00</strong>'));
- assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Monthly Spend Remaining</label><strong>$0.00</strong>'));
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Monthly Spend Remaining</label><strong>$700.00</strong>'));
  assert.ok(nodes['#overviewStats'].innerHTML.includes('Over plan by $960.00'));
- assert.ok(nodes['#overviewStats'].innerHTML.includes('Over plan by $260.00'));
+ assert.ok(!nodes['#overviewStats'].innerHTML.includes('Over plan by $260.00'));
 
  // Weekly Summary uses only weekly-labelled non-calendar lines and their own spending.
  setClock(2026,11,4);
@@ -376,6 +376,43 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
   for(let i=1;i<names.length;i++)assert.ok(pulse.indexOf(names[i-1])<pulse.indexOf(names[i]),focus+' usage order');
   assert.ok(pulse.includes('150% used'));assert.ok(pulse.includes('0% used'));
  }
+
+ // Non-monthly funding stays in slush until confirmed, without consuming regular budget capacity.
+ setClock(2026,11,14);
+ run("user.data=seed();D().budgets=[{id:'gas',name:'Gas',category:'Fuel',cadence:'monthly',amount:200},{id:'food',name:'Food',category:'Groceries',cadence:'monthly',amount:300},{id:'repair',name:'Car repair',category:'Car repair',cadence:'annual',amount:1200},{id:'weekly',name:'Weekly',cadence:'weekly',amount:100}];D().bills=[];D().transactions=[{id:'gas-spend',budgetId:'gas',title:'Gas',date:'2026-11-14',amount:250},{id:'food-spend',budgetId:'food',title:'Food',date:'2026-11-14',amount:50},{id:'repair-spend',budgetId:'repair',title:'Car repair purchase',category:'Car repair',date:'2026-11-14',amount:500},{id:'none',title:'Unassigned',date:'2026-11-14',budgetId:null,amount:75},{id:'weekly-spend',budgetId:'weekly',title:'Weekly',date:'2026-11-14',amount:10}];D().incomes=[{id:'pay',source:'Paycheck',date:'2026-10-15',amount:2000}];renderOverview();renderTransfers()");
+ assert.ok(!html.includes('id="page-slush"'));
+ assert.ok(html.includes('data-page="transfers"'));
+ assert.equal(run('monthlySummaryTotals().plan'),1000);
+ assert.equal(run('monthlySummaryTotals().spending'),260);
+ assert.ok(nodes['#overviewStats'].innerHTML.includes('<label>Monthly Spend Remaining</label><strong>$740.00</strong>'));
+ assert.equal(run("overSum('year')"),625);
+ assert.equal(run("needsFundsTransfer(expenses()[4])"),false);
+ assert.ok(nodes['#pendingTransfers'].innerHTML.includes('Car repair purchase'));
+ assert.ok(!nodes['#pendingTransfers'].innerHTML.includes('data-transfer-confirm="gas-spend"'));
+ run("confirmFundsTransfer('repair-spend');$('#transferDate').value='2026-11-14';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run("overSum('year')"),125);
+ assert.equal(run('transferActivity().length'),1);
+ assert.equal(run("transferActivity()[0].date"),'2026-11-14');
+ assert.equal(run('cashTotals().monthSpending'),885);
+ assert.equal(run('cashTotals().ytdIncome'),2000);
+ assert.equal(run('monthlySummaryTotals().spending'),260);
+ run("confirmFundsTransfer('repair-spend');renderTransfers();$('#txSearch').value='';$('#txCategory').value='all';$('#txType').value='transfer';renderTransactions();lp='year';$('#ledgerType').value='transfer';renderLedger()");
+ assert.equal(run('transferActivity().length'),1);
+ assert.ok(!nodes['#pendingTransfers'].innerHTML.includes('Car repair purchase'));
+ assert.ok(nodes['#confirmedTransfers'].innerHTML.includes('Car repair purchase'));
+ assert.ok(nodes['#txRows'].innerHTML.includes('Funds transfer'));
+ assert.ok(nodes['#ledgerRows'].innerHTML.includes('Funds transfer'));
+ assert.ok(nodes['#ledgerStats'].innerHTML.includes('<label>Real outflow</label><strong>$885.00</strong>'));
+ run("expenses()[2].amount=600;renderTransfers()");
+ assert.equal(run('transferActivity().length'),0);
+ assert.equal(run("overSum('year')"),725);
+ run("confirmFundsTransfer('repair-spend');$('#transferDate').value='2026-11-14';$('#modal form').onsubmit({preventDefault(){}});$('#page-transfers').onclick({target:{closest(selector){return selector==='[data-transfer-undo]'?{dataset:{transferUndo:'repair-spend'}}:null}}})");
+ assert.equal(run('transferActivity().length'),0);
+ assert.equal(run("overSum('year')"),725);
+ run("confirmFundsTransfer('none');$('#transferDate').value='2026-11-15';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.ok(nodes['#dlgerror'].textContent.includes('valid transfer date'));
+ assert.equal(run('transferActivity().length'),0);
+ run('D().transactions=[];renderTransfers()');assert.ok(nodes['#pendingTransfers'].innerHTML.includes('All purchases needing transfers are covered'));
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 

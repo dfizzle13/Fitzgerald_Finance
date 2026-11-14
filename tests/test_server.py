@@ -130,6 +130,23 @@ class HouseholdServerTests(unittest.TestCase):
         for changed in (dict(line,recurrence='daily'),dict(line,budgetDate='2026-02-31'),dict(line,history=[dict(line['history'][0],budgetDate='bad')])):
             self.assertEqual(self.admin.call('/api/state','PUT',{'revision':2,'data':dict(DATA,budgets=[changed])})[0],400)
         self.assertEqual(second.call('/api/state')[1]['data']['budgets'][0],line)
+    def test_funds_transfer_confirmation_sync_and_validation(self):
+        from datetime import date
+        today = date.today().isoformat()
+        purchase = {'id': 'repair', 'date': today, 'amount': 500, 'budgetId': None,
+                    'fundsTransfer': {'date': today, 'purchaseDate': today, 'amount': 500, 'budgetId': None}}
+        data = dict(DATA, transactions=[purchase])
+        self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 1, 'data': data})[0], 200)
+        member = self.member()
+        self.assertEqual(member.call('/api/state')[1]['data']['transactions'][0], purchase)
+        for transfer in ('invalid', dict(purchase['fundsTransfer'], date='bad'),
+                         dict(purchase['fundsTransfer'], amount=499),
+                         dict(purchase['fundsTransfer'], budgetId='different'),
+                         dict(purchase['fundsTransfer'], purchaseDate='2000-01-01')):
+            invalid = dict(DATA, transactions=[dict(purchase, fundsTransfer=transfer)])
+            self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 2, 'data': invalid})[0], 400)
+        self.assertEqual(member.call('/api/state')[1]['data']['transactions'][0], purchase)
+
     def test_data_validation_and_password_hashing(self):
         self.assertEqual(self.admin.call('/api/state', 'PUT', {'revision': 1, 'data': {'budgets': 'wrong'}})[0], 400)
         self.assertEqual(self.admin.call('/api/users', 'POST', {'username': 'spouse', 'password': 'short'})[0], 400)

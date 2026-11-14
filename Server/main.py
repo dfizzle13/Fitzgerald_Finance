@@ -69,6 +69,16 @@ def validate_data(data):
                 raise APIError(400, 'Invalid monetary amount.')
             if key in ('transactions', 'incomes') and not valid_date(row.get('date')):
                 raise APIError(400, 'Use a valid transaction date.')
+            if key == 'transactions' and row.get('fundsTransfer') is not None:
+                transfer = row['fundsTransfer']
+                if (not isinstance(transfer, dict)
+                        or not valid_date(transfer.get('date'))
+                        or transfer['date'] > calendar_date.today().isoformat()
+                        or type(transfer.get('amount')) not in (int, float)
+                        or transfer['amount'] != row.get('amount')
+                        or transfer.get('budgetId') != row.get('budgetId')
+                        or transfer.get('purchaseDate') != row.get('date')):
+                    raise APIError(400, 'Transfer confirmation must match the purchase and use a valid transfer date.')
             if key == 'bills' and row.get('startDate') is not None and not valid_date(row['startDate']):
                 raise APIError(400, 'Use a valid bill start date.')
             if key == 'budgets':
