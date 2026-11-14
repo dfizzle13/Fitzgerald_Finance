@@ -413,6 +413,41 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.ok(nodes['#dlgerror'].textContent.includes('valid transfer date'));
  assert.equal(run('transferActivity().length'),0);
  run('D().transactions=[];renderTransfers()');assert.ok(nodes['#pendingTransfers'].innerHTML.includes('All purchases needing transfers are covered'));
+
+ // Pending-category totals and Ledger transfer reports reconcile with full history.
+ run("D().transactions=Array.from({length:42},function(_,i){var t={id:'page-'+i,title:'Purchase '+i,date:i===0?'2025-12-31':'2026-11-14',amount:1,budgetId:'repair',category:i%2?'Miscellaneous':'Car repair'};if(i%4===0)t.fundsTransfer={amount:1,budgetId:'repair',purchaseDate:t.date,date:'2026-01-02'};return t});D().incomes=Array.from({length:31},function(_,i){return {id:'income-'+i,source:'Income '+i,date:'2026-11-14',amount:10}});renderTransfers();lp='year';$('#ledgerType').value='all';visibleRows.ledger=15;renderLedger()");
+ assert.equal(nodes['#transferPendingTotal'].textContent,'$31.00');
+ assert.ok(nodes['#transferPendingCategories'].innerHTML.includes('Miscellaneous</span><strong>$21.00'));
+ assert.ok(nodes['#transferPendingCategories'].innerHTML.includes('Car repair</span><strong>$10.00'));
+ assert.ok(nodes['#ledgerTransferSummary'].textContent.includes('$31.00 outstanding'));
+ assert.ok(nodes['#ledgerTransferSummary'].textContent.includes('$11.00 confirmed'));
+ assert.ok(nodes['#ledgerConfirmedCategories'].innerHTML.includes('Car repair</span><strong>$11.00'));
+ assert.ok(html.indexOf('class="panel ledger-slush"')<html.indexOf('class="panel ledger-transfer-report"'));
+ // Rendering grows in 15-row batches, while totals continue to include all matching records.
+ assert.equal((nodes['#ledgerRows'].innerHTML.match(/<tr>/g)||[]).length,15);
+ assert.equal(nodes['#ledgerRowCount'].textContent,'Showing 15 of 83 entries');
+ const completeLedgerStats=nodes['#ledgerStats'].innerHTML;
+ run("$('#ledgerShowMore').onclick()");assert.equal((nodes['#ledgerRows'].innerHTML.match(/<tr>/g)||[]).length,30);
+ assert.equal(nodes['#ledgerStats'].innerHTML,completeLedgerStats);
+ run("$('#ledgerPeriods').onclick({target:{closest(){return {dataset:{period:'all'}}}}})");
+ assert.equal((nodes['#ledgerRows'].innerHTML.match(/<tr>/g)||[]).length,15);
+ assert.equal(nodes['#ledgerRowCount'].textContent,'Showing 15 of 84 entries');
+ run("$('#ledgerType').value='transfer';$('#ledgerType').onchange()");
+ assert.equal((nodes['#ledgerRows'].innerHTML.match(/<tr>/g)||[]).length,11);
+ run("$('#txSearch').value='';$('#txCategory').value='all';$('#txType').value='all';visibleRows.transactions=15;renderTransactions()");
+ assert.equal((nodes['#txRows'].innerHTML.match(/<tr>/g)||[]).length,15);
+ assert.equal(nodes['#txRowCount'].textContent,'Showing 15 of 84 entries');
+ run("$('#txShowMore').onclick()");assert.equal((nodes['#txRows'].innerHTML.match(/<tr>/g)||[]).length,30);
+ run('visibleRows.income=15;renderIncome()');
+ const completeIncomeStats=nodes['#incomeStats'].innerHTML;
+ assert.equal((nodes['#incomeRows'].innerHTML.match(/<tr>/g)||[]).length,15);
+ run("$('#incomeShowMore').onclick()");assert.equal((nodes['#incomeRows'].innerHTML.match(/<tr>/g)||[]).length,30);
+ run("$('#incomeShowMore').onclick()");assert.equal((nodes['#incomeRows'].innerHTML.match(/<tr>/g)||[]).length,31);
+ assert.equal(nodes['#incomeRowCount'].textContent,'Showing 31 of 31 entries');
+ assert.equal(nodes['#incomeStats'].innerHTML,completeIncomeStats);
+ run("D().transactions=[];D().incomes=[];renderTransfers();renderLedger();renderIncome();renderTransactions()");
+ assert.ok(nodes['#transferPendingCategories'].innerHTML.includes('No transfers outstanding'));
+ assert.equal(nodes['#incomeRowCount'].textContent,'Showing 0 of 0 entries');
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
