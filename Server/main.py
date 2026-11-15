@@ -6,6 +6,7 @@ import math
 import socket
 import device_auth
 import account_admin
+import budget_cover
 import argparse
 import hashlib
 import hmac
@@ -128,6 +129,24 @@ class FinanceHTTPServer(ThreadingHTTPServer):
                 data TEXT NOT NULL, updated_by TEXT, updated_at INTEGER NOT NULL);
             ''')
             device_auth.initialize(con)
+    def archive_due_months(self, con):
+        row = con.execute('SELECT * FROM household WHERE id=1').fetchone()
+        if not row:
+            return
+        data = json.loads(row['data'])
+        if budget_cover.archive_months(data):
+            self.backup()
+            con.execute('UPDATE household SET revision=?,data=?,updated_at=? WHERE id=1',
+                        (row['revision'] + 1, json.dumps(data, allow_nan=False), int(time.time())))
+            con.commit()
+
+    def service_actions(self):
+        month = calendar_date.today().strftime('%Y-%m')
+        if getattr(self, '_archive_month', None) != month:
+            with self.write_lock, self.connect() as con:
+                self.archive_due_months(con)
+            self._archive_month = month
+
     @contextmanager
     def connect(self):
         con = sqlite3.connect(self.database, timeout=15)
@@ -207,6 +226,7 @@ class Handler(BaseHTTPRequestHandler):
     def account(self, row):
         return {'id': row['id'], 'username': row['username'], 'role': row['role'], 'createdAt': row['created_at'] * 1000}
     def state(self, con):
+        self.server.archive_due_months(con)
         row = con.execute('SELECT * FROM household WHERE id=1').fetchone()
         return {'data': json.loads(row['data']), 'revision': row['revision']}
     def credentials(self, body):
@@ -325,6 +345,11 @@ class Handler(BaseHTTPRequestHandler):
             current = self.state(con)
             if type(body.get('revision')) is not int or body['revision'] != current['revision']:
                 return self.send_json(409, {'error': 'The household was updated by another device.', **current})
+            try:
+                budget_cover.validate_changes(current['data'], data)
+                budget_cover.archive_months(data)
+            except (ValueError, KeyError, TypeError) as error:
+                raise APIError(400, str(error))
             self.server.backup()
             revision = current['revision'] + 1
             con.execute('UPDATE household SET revision=?,data=?,updated_by=?,updated_at=? WHERE id=1',

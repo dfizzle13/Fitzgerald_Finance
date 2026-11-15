@@ -496,6 +496,42 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  run("D().transactions.push({id:'orphan-budget',title:'Old business purchase',category:'Business expenses',budgetId:'deleted-line',date:'2026-11-04',amount:25});confirmFundsTransfer('orphan-budget');$('#transferSource').value='covered';$('#transferDate').value='2026-11-14';$('#modal form').onsubmit({preventDefault(){}})");
  assert.equal(run('expenses()[5].budgetId'),null);assert.equal(run('coverage()[5].over'),0);
  for(const category of ['Car repair','Fuel','Groceries']){context.category=category;assert.equal(run('needsTransferSource({category:category,budgetId:null})'),false)}
+
+ // Budget covers use cents, consume donor budgets, and remain internal to cash spending.
+ setClock(2026,11,15);
+ run("user.data=seed();D().budgets=[{id:'birthday',name:'Birthday',category:'Gifts',cadence:'annual',amount:20},{id:'groceries',name:'Groceries',category:'Groceries',cadence:'monthly',amount:100}];D().transactions=[{id:'gift',title:'Birthday gift',category:'Gifts',budgetId:'birthday',date:'2026-11-15',amount:20.28},{id:'food',title:'Food',category:'Groceries',budgetId:'groceries',date:'2026-11-15',amount:10}];D().bills=[];D().incomes=[];renderLedger()");
+ assert.equal(run('coverage()[0].over'),0.28);
+ run("period='year';renderOverview()");assert.ok(nodes['#pulse'].innerHTML.includes('data-cover-line="birthday"'));
+ run("coverSlushPurchase('gift');$('#coverBudget').value='groceries';$('#coverAmount').value='0.10';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run('coverage()[0].over'),0.18);
+ assert.equal(run("moneyCents(totalLine('groceries','month'))"),1010);
+ run("coverSlushPurchase('gift');$('#coverBudget').value='groceries';$('#coverAmount').value='0.18';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run('coverage()[0].over'),0);
+ assert.equal(run("moneyCents(totalLine('groceries','month'))"),1028);
+ assert.equal(run('moneyCents(cashTotals().monthSpending)'),3028);
+ assert.equal(run('moneyCents(monthlySummaryTotals().spending)'),1028);
+ assert.equal(run('budgetCoverActivity().length'),2);
+ assert.equal(run('allActivity().filter(function(entry){return entry.kind==="budget-cover"}).length'),2);
+ run("undoBudgetCover('gift',expenses()[0].budgetCovers[0].id)");
+ assert.equal(run('coverage()[0].over'),0.10);
+ assert.equal(run("moneyCents(budgetAvailable(item('groceries')))"),8982);
+
+ assert.equal(run("moneyCents(totalLine('birthday','year'))"),2010);
+ run("D().budgets.push({id:'empty',name:'Empty budget',category:'Fuel',cadence:'monthly',amount:0});coverSlushLine('birthday');$('#coverBudget').value='empty';$('#coverAmount').value='0.10';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run("moneyCents(totalLine('birthday','year'))"),2000);
+ assert.equal(run("moneyCents(totalLine('empty','month'))"),10);
+ assert.equal(run("moneyCents(overSum('month'))"),10);
+ run("period='month';renderOverview()");assert.ok(nodes['#pulse'].innerHTML.includes('data-cover-line="empty"'));
+ run("coverSlushLine('empty');$('#coverBudget').value='groceries';$('#coverAmount').value='0.10';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run("moneyCents(totalLine('empty','month'))"),0);
+ assert.equal(run("moneyCents(overSum('month'))"),0);
+ assert.equal(run('moneyCents(cashTotals().monthSpending)'),3028);
+ run("D().bills=[{id:'unpaid',name:'Unpaid electric',category:'Electricity',frequency:'monthly',day:20,monthlyAmounts:{'2026-11':100}},{id:'paid',name:'Paid internet',category:'Internet',frequency:'monthly',day:5,monthlyAmounts:{'2026-11':20},paid:{'2026-11-05':true}}];syncBillBudgets()");
+ assert.equal(run("eligibleCoverSource(budgets().find(function(line){return line.billId==='unpaid'}))"),false);
+ assert.equal(run("eligibleCoverSource(budgets().find(function(line){return line.billId==='paid'}))"),true);
+ run("D().monthlyArchives=[{key:'2026-11',slushEntries:coverage().map(function(entry){return Object.assign({},entry,{permanent:true})}),permanentSlush:0}];D().budgets[0].amount=100;renderLedger()");
+ assert.equal(run('coverage()[0].over'),0);
+ assert.ok(!nodes['#pulse'].innerHTML.includes('data-cover-line="birthday"'));
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
