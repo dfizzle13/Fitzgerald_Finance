@@ -316,7 +316,7 @@ function sharedStatus(message,error){
  var unsaved=!!(sharedClient&&sharedClient.desired),expired=/session expired|session has ended|sign in/i.test(String(message)),text=String(message||'');
  $('#sharedStatus').classList.toggle('hide',!error);
  $('#sharedTitle').textContent=unsaved?'Changes waiting to save':expired?'Sign in again':'Connection needs attention';
- $('#sharedMessage').textContent=error?(unsaved?'Keep this window open. Reconnect to save your changes.':expired?'Your session has ended. Reload the app to sign in.':text.length>120?'The request could not finish. Try again or check the connection details.':text):text;
+ $('#sharedMessage').textContent=error?(expired?'Your session has ended. Reload the app to sign in.':text):text;
  $('#sharedDetails').textContent=text;
  $('#sharedRetry').textContent=unsaved?'Retry save':'Try again';
  $('#sharedDownload').classList.toggle('hide',!unsaved);

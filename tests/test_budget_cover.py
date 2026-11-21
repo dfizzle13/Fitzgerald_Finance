@@ -82,6 +82,21 @@ class BudgetCoverAccountingTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 budget_cover.validate_changes(data, invalid, date(2026, 12, 1))
 
+    def test_existing_covers_do_not_block_budget_edits_or_later_saves(self):
+        before = household()
+        add_cover(before)
+        changed = deepcopy(before)
+        changed['budgets'][0]['amount'] = 25
+        budget_cover.validate_changes(before, changed, date(2026, 11, 15))
+        self.assertEqual(changed['transactions'][0]['budgetCovers'], before['transactions'][0]['budgetCovers'])
+        later = deepcopy(changed)
+        later['transactions'].append({'id': 'later', 'date': '2026-11-15', 'amount': 1, 'budgetId': 'groceries'})
+        budget_cover.validate_changes(changed, later, date(2026, 11, 15))
+        invalid = deepcopy(later)
+        add_cover(invalid, 'extra', 0.01)
+        with self.assertRaisesRegex(ValueError, 'new budget cover exceeds'):
+            budget_cover.validate_changes(later, invalid, date(2026, 11, 15))
+
     def test_unpaid_bill_excluded_and_coverage_can_move_to_another_budget(self):
         before = household()
         before['budgets'].append({'id': 'empty', 'name': 'Empty', 'category': 'Fuel', 'cadence': 'monthly', 'amount': 0})

@@ -40,5 +40,34 @@ global.localStorage={setItem(){throw Error('Financial writes to local storage ar
  d.stage({...clone(server),theme:'paper'});while(d.saving)await new Promise(r=>setTimeout(r,1));
  assert.equal(d.blocked,true);assert.ok(d.desired);
  global.fetch=originalFetch;await d.retry();assert.equal(d.blocked,false);assert.equal(server.theme,'paper');
+ // A rejected validation keeps the draft but allows the next corrected edit to save.
+ const validationClient=new FinanceServer(hooks);
+ validationClient.accept({user:{id:'test'},csrf:'csrf',data:clone(server),revision});
+ global.fetch=async(url,options)=>{
+  const body=JSON.parse(options.body);
+  if(body.data.theme==='invalid')return {ok:false,status:400,json:async()=>({error:'Choose a supported theme.'})};
+  return originalFetch(url,options);
+ };
+ validationClient.stage({...clone(server),theme:'invalid'});
+ while(validationClient.saving)await new Promise(r=>setTimeout(r,1));
+ assert.equal(validationClient.blocked,false);assert.equal(validationClient.desired.theme,'invalid');
+ assert.ok(messages.at(-1).message.includes('Choose a supported theme.'));
+ assert.ok(!messages.at(-1).message.includes('Reconnect'));
+ validationClient.stage({...clone(server),theme:'evergreen'});
+ while(validationClient.saving)await new Promise(r=>setTimeout(r,1));
+ assert.equal(validationClient.desired,null);assert.equal(server.theme,'evergreen');
+ // A correction queued while the failed request is in flight must also save automatically.
+ let rejectPending;
+ const queued=new FinanceServer(hooks);queued.accept({user:{id:'test'},csrf:'csrf',data:clone(server),revision});
+ global.fetch=(url,options)=>{
+  const body=JSON.parse(options.body);
+  if(body.data.theme==='invalid')return new Promise(resolve=>{rejectPending=()=>resolve({ok:false,status:400,json:async()=>({error:'Invalid edit.'})})});
+  return originalFetch(url,options);
+ };
+ queued.stage({...clone(server),theme:'invalid'});
+ queued.stage({...clone(server),theme:'midnight'});rejectPending();
+ while(queued.saving)await new Promise(r=>setTimeout(r,1));
+ assert.equal(queued.blocked,false);assert.equal(queued.desired,null);assert.equal(server.theme,'midnight');
+ global.fetch=originalFetch;
  console.log('Shared sync checks passed: merge, conflicts, deletions, offline recovery.');
 })().catch(error=>{console.error(error);process.exitCode=1});

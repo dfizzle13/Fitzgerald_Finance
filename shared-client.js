@@ -39,6 +39,7 @@ class FinanceServer {
  async flush(){
   if(this.saving||this.blocked||!this.desired)return;
   this.saving=true;
+  let rejectedDraft=null;
   try{
    let conflicts=0;
    while(this.desired){
@@ -54,12 +55,20 @@ class FinanceServer {
       try{const merged=merge(this.base,latest,error.result.data);this.base=copy(error.result.data);this.revision=error.result.revision;this.desired=copy(merged);continue;}
       catch(conflict){this.desired=latest;throw conflict;}
      }
+     if(error.status===400)rejectedDraft=local;
      this.desired=this.desired||local;throw error;
     }
    }
    this.hooks.status('Saved to household server');
-  }catch(error){this.blocked=true;this.hooks.status((error.message||'Connection lost.')+' Unsaved changes remain only in this open window. Reconnect and retry before closing.',true);}
-  finally{this.saving=false;}
+  }catch(error){
+   this.blocked=error.status!==400;
+   const recovery=error.status===400?' Correct the change and save again. Your unsaved changes are still in this open window.':' Unsaved changes remain only in this open window. Reconnect and retry before closing.';
+   this.hooks.status((error.message||'Connection lost.')+recovery,true);
+  }
+  finally{
+   this.saving=false;
+   if(rejectedDraft&&this.desired&&!equal(this.desired,rejectedDraft))return this.flush();
+  }
  }
  async poll(){
   if(!this.user||this.saving||this.desired||this.blocked||!this.hooks.idle())return;

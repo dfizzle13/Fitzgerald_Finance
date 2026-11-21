@@ -144,6 +144,7 @@ def validate_changes(previous, current, today=None):
         if identifier not in old and purchase['date'][:7] in prior_archives:
             raise ValueError('New purchases cannot be added to an archived budget month.')
     ids = set()
+    new_targets = set()
     for purchase in current['transactions']:
         covers = purchase.get('budgetCovers', [])
         if not isinstance(covers, list):
@@ -169,6 +170,7 @@ def validate_changes(previous, current, today=None):
                 if prior[cover['id']] != cover:
                     raise ValueError('Undo an existing budget cover before replacing it.')
                 continue
+            new_targets.add(cover.get('targetChargeId', purchase['id']))
             if cover['date'][:7] != month or purchase['date'][:7] != month or cover_day > today or purchase['date'] > today.isoformat():
                 raise ValueError('Only current-month purchases can receive budget coverage.')
             line = next((line for line in current['budgets'] if line['id'] == cover.get('budgetId') and line.get('active') is not False), None)
@@ -193,8 +195,8 @@ def validate_changes(previous, current, today=None):
                     raise ValueError('Undo covers that depend on this cover first.')
     calculated = coverage(current)
     for entry in calculated:
-        if cents(entry.get('coveredAmount', 0)) > cents(entry.get('rawOver', 0)):
-            raise ValueError('Budget covers exceed this purchase\'s overage. Undo the covers before changing its funding or budget.')
+        if entry['id'] in new_targets and cents(entry.get('coveredAmount', 0)) > cents(entry.get('rawOver', 0)):
+            raise ValueError('The new budget cover exceeds the uncovered overage. Choose a smaller amount.')
 
 
 def monthly_limit(line, month):
