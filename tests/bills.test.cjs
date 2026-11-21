@@ -6,7 +6,7 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
  new vm.Script(script);
  const nodes={};
- const node=()=>({value:'all',options:[],innerHTML:'',style:{},dataset:{},classList:{add(){},remove(){},toggle(){}},addEventListener(){},querySelector(){return node()},closest(){return node()},querySelectorAll(){return []}});
+ const node=()=>({value:'all',options:[],innerHTML:'',style:{},dataset:{},classList:{add(){},remove(){},toggle(){}},addEventListener(){},setCustomValidity(message){this.validationMessage=message},setAttribute(){},querySelector(){return node()},closest(){return node()},querySelectorAll(){return []}});
  const context=vm.createContext({console,Date,Intl,Math,JSON,Number,String,Array,Object,Promise,Set,Uint8Array,TextEncoder,localStorage:{setItem(){},getItem(){return null}},document:{querySelector(s){return nodes[s]||(nodes[s]=node())},querySelectorAll(){return []},documentElement:node(),addEventListener(){}},window:{addEventListener(){}},navigator:{},confirm:()=>true,alert(){},setTimeout(){}});
  vm.runInContext(script.slice(script.indexOf("'use strict';"),script.lastIndexOf('load().then')),context);
  vm.runInContext(`
@@ -532,6 +532,27 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  run("D().monthlyArchives=[{key:'2026-11',slushEntries:coverage().map(function(entry){return Object.assign({},entry,{permanent:true})}),permanentSlush:0}];D().budgets[0].amount=100;renderLedger()");
  assert.equal(run('coverage()[0].over'),0);
  assert.ok(!nodes['#pulse'].innerHTML.includes('data-cover-line="birthday"'));
+
+ // Purchase forms reject archived dates before mutating the in-memory draft or saving.
+ setClock(2026,11,21);
+ run("user.data=seed();D().budgets=[];D().transactions=[];D().monthlyArchives=[{key:'2026-10',slushEntries:[]}];$('#fdate').value='2026-11-21';expenseForm(null)");
+ assert.equal(nodes['#savePurchase'].disabled,false);
+ run("$('#fdate').value='2026-10-15';$('#fdate').oninput()");
+ assert.equal(nodes['#savePurchase'].disabled,true);assert.equal(nodes['#ftitle'].disabled,true);
+ assert.ok(nodes['#purchaseDateError'].textContent.includes('October 2026 is archived'));
+ run("$('#famount').value='10';$('#ftitle').value='Blocked entry';$('#fline').value='';$('#fcat').value='Miscellaneous';$('#fdesc').value='';$('#modal form').onsubmit({preventDefault(){}})");
+ assert.equal(run('expenses().length'),0);assert.ok(nodes['#dlgerror'].textContent.includes('archived'));
+ run("$('#fdate').value='2026-11-21';$('#fdate').onchange()");assert.equal(nodes['#savePurchase'].disabled,false);assert.equal(nodes['#ftitle'].disabled,false);assert.equal(nodes['#fdate'].validationMessage,'');
+ assert.equal(run("purchaseDateMessage('2026-09-15',null).includes('archived')"),true);
+ assert.equal(run("purchaseDateMessage('2026-02-31',null)"),'Choose a valid purchase date.');
+ // A rejected, never-saved entry can be corrected without treating it as an archived record.
+ run("sharedMode=true;sharedClient={base:{transactions:[]}};var rejected={id:'unsaved',date:'2026-10-15',amount:10,category:'Miscellaneous',budgetId:null,title:'Unsaved',description:''};D().transactions=[rejected];$('#fdate').value=rejected.date;expenseForm(rejected)");
+ assert.equal(nodes['#savePurchase'].disabled,true);
+ run("$('#fdate').value='2026-11-21';$('#fdate').onchange()");assert.equal(nodes['#savePurchase'].disabled,false);
+ assert.equal(run("purchaseDateMessage('2026-11-21',rejected)"),'');
+ run("sharedClient.base.transactions=[{id:'saved',date:'2026-10-15',amount:10}]");
+ assert.equal(run("purchaseDateMessage('2026-10-15',{id:'saved',date:'2026-10-15'})"),'');
+ run('sharedMode=false;sharedClient=null');
  console.log(file+': bill, payment, rollover and budget horizon checks passed');
 }
 
