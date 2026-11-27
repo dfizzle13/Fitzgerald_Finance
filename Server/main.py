@@ -7,6 +7,7 @@ import socket
 import device_auth
 import account_admin
 import budget_cover
+import budget_plans
 import argparse
 import hashlib
 import hmac
@@ -97,6 +98,10 @@ def validate_data(data):
                         raise APIError(400, 'Invalid budget recurrence history.')
     if data.get('activeBudgetMonth') and not valid_date(str(data['activeBudgetMonth']) + '-01'):
         raise APIError(400, 'Invalid active budget month.')
+    try:
+        budget_plans.validate(data)
+    except (ValueError, TypeError, KeyError) as error:
+        raise APIError(400, str(error))
     # Device authenticator identifiers are never shared between phones.
     data = dict(data)
     data['biometric'] = {'enabled': False, 'id': None, 'failures': 0}

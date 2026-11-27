@@ -533,6 +533,18 @@ for (const file of ['index.html', 'app/src/main/assets/www/index.html']) {
  assert.equal(run('coverage()[0].over'),0);
  assert.ok(!nodes['#pulse'].innerHTML.includes('data-cover-line="birthday"'));
 
+ // Reserved plans open ten days before next month, remain editable, and do not enter live totals.
+ setClock(2026,11,20);assert.equal(run('canPlanNextMonth()'),false);
+ setClock(2026,11,21);assert.equal(run('canPlanNextMonth()'),true);
+ run("user.data=seed();D().budgets=[{id:'food',name:'Food',category:'Groceries',group:'Food',cadence:'monthly',amount:100},{id:'once',name:'One time',category:'Groceries',cadence:'monthly',recurrence:'one-time',budgetDate:'2026-11-15',amount:40},{id:'year',name:'Annual',cadence:'annual',amount:500}];D().bills=[{id:'power',name:'Electric',frequency:'monthly',day:5,active:true,monthlyAmounts:{'2026-11':80}}];D().incomes=[{id:'pay',date:'2026-11-20',amount:1000}];createPendingPlan()");
+ assert.equal(run('pendingPlans().length'),1);assert.equal(run('pendingPlans()[0].items.length'),1);
+ assert.equal(run('planTotals(pendingPlans()[0]).total'),100);
+ run("pendingPlans()[0].items[0].amount=200;pendingPlans()[0].billAmounts.power=95");
+ assert.equal(run("item('food').amount"),100);assert.equal(run("bills()[0].monthlyAmounts['2026-12']"),undefined);
+ assert.equal(run('planTotals(pendingPlans()[0]).total'),295);assert.equal(run('planTotals(pendingPlans()[0]).income'),1000);
+ run('createPendingPlan()');assert.equal(run('pendingPlans().length'),1);
+ setClock(2026,12,1);run('renderPendingBudgets()');assert.ok(nodes['#pendingBudgetSection'].innerHTML.includes('Confirm prior month'));
+ setClock(2026,12,15);run('renderPendingBudgets()');assert.ok(nodes['#pendingBudgetSection'].innerHTML.includes('Reserved budget'));
  // Purchase forms reject archived dates before mutating the in-memory draft or saving.
  setClock(2026,11,21);
  run("user.data=seed();D().budgets=[];D().transactions=[];D().monthlyArchives=[{key:'2026-10',slushEntries:[]}];$('#fdate').value='2026-11-21';expenseForm(null)");

@@ -3,6 +3,7 @@ from copy import deepcopy
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import re
+import budget_plans
 
 
 def cents(value):
@@ -235,7 +236,7 @@ def archive_months(data, today=None):
             cursor = (cursor.replace(day=28) + timedelta(days=4)).replace(day=1)
     missing = sorted(month for month in months if 'slushEntries' not in existing.get(month, {}))
     if not missing and active >= current:
-        return False
+        return budget_plans.activate(data, today)
     calculated = coverage(data)
     all_charges = net_charges(data)
     for month in missing:
@@ -262,4 +263,5 @@ def archive_months(data, today=None):
     if active < current:
         data['activeBudgetMonth'] = current
         data.pop('rolloverPromptedFor', None)
+    budget_plans.activate(data, today)
     return True
